@@ -1,0 +1,77 @@
+$schema: "https://coderabbit.ai/integrations/schema.v2.json"
+
+language: "ko-KR"
+
+tone_instructions: >
+  간결하고 실행 가능한 형태로 리뷰하세요. 스타일보다 데이터 정합성,
+  트랜잭션, 동시성, 성능, 보안을 우선하세요. 실제 장애나 오동작 가능성이
+  있는 문제만 지적하고 최소한의 수정 방법을 제시하세요. 공모전 MVP 범위를
+  벗어나는 추상화, 계층 분리, 장기 확장성 개선은 제안하지 마세요.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  assess_linked_issues: true
+  related_prs: true
+  poem: true
+
+  tools:
+    github-checks:
+      enabled: true
+
+  path_instructions:
+    - path: "src/main/java/com/chagokchagok/server/domain/**"
+      instructions: |
+        - Controller는 요청 검증과 응답 변환, Service 호출에 집중하는지 확인하세요.
+        - Service의 트랜잭션 경계와 운행·방문·업무 기록의 상태 전이가 유효한지 확인하세요.
+        - 오프라인 동기화와 재시도에서 중복 생성, lost update, 순서 역전이 발생하지 않는지 확인하세요.
+        - 사용자 소유 데이터는 서버에서 소유권을 검증하고 클라이언트가 보낸 사용자 식별자를 신뢰하지 않는지 확인하세요.
+        - 핵심 불변식은 애플리케이션 검증뿐 아니라 UNIQUE, NOT NULL, FOREIGN KEY 등 DB 제약으로도 보호되는지 확인하세요.
+        - 조회 범위, N+1, pagination, 인덱스가 실제 사용 패턴에 적절한지 확인하세요.
+
+    - path: "src/main/java/com/chagokchagok/server/global/security/**"
+      instructions: |
+        - JWT 서명·만료 검증, 인증·인가 경계, 사용자 소유권 검증 누락을 확인하세요.
+        - permitAll 범위가 최소인지, 토큰·secret·개인정보가 응답이나 로그에 노출되지 않는지 확인하세요.
+        - 요청 값이나 JWT claim을 검증 없이 권한 판단의 근거로 사용하지 않는지 확인하세요.
+
+    - path: "src/main/java/com/chagokchagok/server/global/exception/**"
+      instructions: |
+        - 비즈니스 오류와 서버 오류가 적절한 HTTP 상태 및 공통 응답 형식으로 변환되는지 확인하세요.
+        - 내부 예외, SQL 정보, stack trace 등 구현 세부사항이 클라이언트에 노출되지 않는지 확인하세요.
+        - 광범위한 예외 처리로 원인이나 복구 불가능한 오류가 숨겨지지 않는지 확인하세요.
+
+    - path: "src/main/resources/db/migration/**"
+      instructions: |
+        - PostgreSQL 17에서 실행 가능하며 기존 데이터가 있는 환경에도 안전한 migration인지 확인하세요.
+        - 적용된 migration 수정, version 중복, NOT NULL·UNIQUE·FOREIGN KEY 추가 시 데이터 충돌을 확인하세요.
+        - 테이블 lock과 인덱스 생성 비용, rollback 및 배포 호환성을 확인하세요.
+
+    - path: "src/test/java/**"
+      instructions: |
+        - 정상 흐름뿐 아니라 상태 전이 실패, 중복 동기화, 재시도, 경계값, 권한 실패가 검증되는지 확인하세요.
+        - 동시성이나 PostgreSQL 제약·lock에 의존하는 동작을 H2 테스트만으로 검증하고 있지 않은지 확인하세요.
+        - 구현 세부사항보다 외부에서 관찰 가능한 동작과 핵심 불변식을 검증하는지 확인하세요.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "[skip review]"
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
