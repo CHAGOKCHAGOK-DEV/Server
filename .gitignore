@@ -1,0 +1,61 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse / Spring Tool Suite
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+
+# Visual Studio Code
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and runtime files
+*.log
+*.pid
+logs/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Generated JVM files
+hs_err_pid*
+replay_pid*
+
+# AI coding agents and local tool instructions
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+.agents/
+.codex/
+.claude/
+.cursor/
+.cline/
+.roo/
+.windsurf/
+.gemini/
+
+.aider*
+
+# Repository-specific instructions used by AI coding assistants
+.github/copilot-instructions.md
+.github/instructions/
