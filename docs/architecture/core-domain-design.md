@@ -10,6 +10,35 @@
 - [핵심 도메인 식별자 설계](../erd/id-strategy.md)
 - [초기 Flyway 마이그레이션](../../src/main/resources/db/migration/V1__create_core_domain.sql)
 
+## 문서 구성
+
+- [설계 원칙](#2-설계-원칙)
+- [도메인 구성](#3-도메인-구성)
+- [Installation과 Copilot](#4-installation과-copilot)
+- [MissionPack과 Mission](#5-missionpack과-mission)
+- [Trip과 MissionResult](#6-trip과-missionresult)
+- [식별자 전략](#7-식별자-전략)
+- [시각과 변경 이력](#8-시각과-변경-이력)
+- [삭제와 보존 정책](#9-삭제와-보존-정책)
+- [인덱스 정책](#10-인덱스-정책)
+- [Flyway와 JPA 스키마 검증](#11-flyway와-jpa-스키마-검증)
+- [향후 음성 응답 확장](#12-향후-음성-응답-확장)
+- [현재 구현 범위에서 제외한 항목](#13-현재-구현-범위에서-제외한-항목)
+- [변경 시 확인할 체크리스트](#14-변경-시-확인할-체크리스트)
+
+## 결정 상태 요약
+
+| 구분 | 현재 결정 | 상태 |
+| --- | --- | --- |
+| 설치 식별 | Installation을 차량이 아닌 앱 설치 단위로 사용 | 확정 |
+| 단일 프로필 | Copilot이 Installation UUID를 공유 PK로 사용 | 확정 |
+| 미션 콘텐츠 | MissionPack 버전과 Mission JSONB로 관리 | 확정 |
+| 오프라인 기록 | Trip과 MissionResult에 Android 생성 UUID 사용 | 확정 |
+| 동기화 충돌 | 동일 UUID의 payload 정규화 및 hash 비교 | 후속 구현 |
+| 콘텐츠 불변성 | 발행된 MissionPack과 Mission의 수정 차단 | 후속 구현 |
+| 음성 저장 | MissionVoiceResponse 별도 엔티티로 확장 | 정책 확정 후 구현 |
+| 보상 기능 | 경험치, 배지 및 레벨 관련 모델 제외 | 현재 범위 제외 |
+
 ## 2. 설계 원칙
 
 ### 설치 단위를 주행 소유자로 사용
