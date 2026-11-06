@@ -1,0 +1,31 @@
+package com.chagokchagok.server.domain;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
+
+class CoreDomainMigrationTest {
+
+    @Test
+    void migrationContainsRequiredTablesAndConstraints() throws IOException {
+        String migration = new ClassPathResource("db/migration/V1__create_core_domain.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(migration)
+                .contains("CREATE TABLE installations")
+                .contains("CREATE TABLE copilots")
+                .contains("CREATE TABLE mission_packs")
+                .contains("CREATE TABLE missions")
+                .contains("CREATE TABLE trips")
+                .contains("CREATE TABLE mission_results")
+                .contains("age_group IN ('AGE_5_6', 'AGE_7_8', 'AGE_9_10')")
+                .contains("CONSTRAINT uk_mission_packs_code_version UNIQUE (code, version)")
+                .contains("CONSTRAINT uk_missions_pack_code UNIQUE (mission_pack_id, code)")
+                .contains("CONSTRAINT ck_missions_config_object CHECK (jsonb_typeof(config) = 'object')")
+                .contains("CONSTRAINT ck_trips_period CHECK (ended_at >= started_at)")
+                .contains("CONSTRAINT ck_mission_results_period CHECK (ended_at >= started_at)");
+    }
+}
