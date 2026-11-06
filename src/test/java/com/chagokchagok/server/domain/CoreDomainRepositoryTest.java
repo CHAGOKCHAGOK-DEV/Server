@@ -21,6 +21,7 @@ import com.chagokchagok.server.domain.trip.entity.TripEndReason;
 import com.chagokchagok.server.domain.trip.entity.TripStatus;
 import com.chagokchagok.server.domain.trip.repository.MissionResultRepository;
 import com.chagokchagok.server.domain.trip.repository.TripRepository;
+import com.chagokchagok.server.global.config.JpaAuditingConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.UUID;
@@ -28,10 +29,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
+@Import(JpaAuditingConfig.class)
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class CoreDomainRepositoryTest {
