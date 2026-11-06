@@ -36,6 +36,7 @@
 | 오프라인 기록 | Trip과 MissionResult에 Android 생성 UUID 사용 | 확정 |
 | 동기화 충돌 | 동일 UUID의 payload 정규화 및 hash 비교 | 후속 구현 |
 | 콘텐츠 불변성 | 발행된 MissionPack과 Mission의 수정 차단 | 후속 구현 |
+| 비정상 종료 복구 | Android 동기화 계약에서 종료 시각과 사유의 복구 기준 확정 | 정책 확정 후 구현 |
 | 음성 저장 | MissionVoiceResponse 별도 엔티티로 확장 | 정책 확정 후 구현 |
 | 보상 기능 | 경험치, 배지 및 레벨 관련 모델 제외 | 현재 범위 제외 |
 
@@ -133,6 +134,15 @@ Trip 상태는 `COMPLETED`, `INTERRUPTED`이고 종료 사유는 다음 값을 �
 
 DB는 각 Enum의 허용값만 검증합니다. `COMPLETED`와 중단 사유처럼 의미가 맞지 않는 조합은 주행 동기화 서비스에서 거부해야 합니다.
 
+### 비정상 종료 Trip의 복구 기준은 미확정
+
+`ended_at`과 `end_reason`이 필수이므로 앱 강제 종료 등으로 종료 시점을 남기지 못한 Trip은 Android가 두 값을 복구해야 동기화할 수 있습니다. 종료 사유는 기존 중단 사유 값을 사용하며, 어떤 값을 고를지와 `ended_at`을 어떻게 추정할지는 Android 동기화 계약에서 확정합니다.
+
+복구 기준은 다음 조건을 만족해야 합니다.
+
+- 복구한 값은 한 번 확정한 뒤 재전송할 때 바꾸지 않습니다. 재시도마다 값이 달라지면 같은 Trip이 충돌로 판정될 수 있습니다.
+- `ended_at`은 `started_at` 이후이면서 소속 MissionResult의 수행 시간을 포함해야 합니다. 허용 오차는 [시간 범위 검증](#시간-범위-검증) 정책을 따릅니다.
+
 ### 사용한 MissionPack 버전을 Trip에 고정
 
 Trip은 수행 당시 사용한 MissionPack을 NOT NULL FK로 참조합니다. 서버의 최신 미션팩이 바뀌어도 과거 주행이 어떤 콘텐츠 버전을 기준으로 실행됐는지 추적할 수 있습니다.
@@ -155,6 +165,28 @@ MissionResult PK는 Android가 생성한 UUID입니다. 한 Trip에서 같은 Mi
 `trips.payload_hash`는 동일 Trip UUID로 받은 데이터가 기존 저장 내용과 같은지 판단하기 위한 SHA-256 해시입니다. 서로 다른 Trip이 같은 결과를 가질 수 있으므로 UNIQUE 제약을 두지 않습니다.
 
 해시는 위변조 방지나 요청 인증 수단이 아닙니다. 동기화 API에서 Trip과 MissionResult 목록을 결정적인 순서와 표현으로 정규화한 뒤 서버가 계산해야 합니다. 구체적인 정규화 범위와 배열 정렬 규칙은 동기화 API 계약에서 확정합니다.
+
+### 재전송 처리 주의사항
+
+Trip과 MissionResult는 저장 뒤 수정하지 않는 모델이므로 재전송이 기존 행을 바꾸면 안 됩니다. 그런데 현재 매핑에서는 ID를 직접 할당하기 때문에 Spring Data `save()`가 INSERT가 아니라 merge로 동작하고, 같은 UUID로 호출하면 오류 없이 기존 행을 덮어씁니다.
+
+| 엔티티 | 덮어쓰기로 바뀔 수 있는 값 | 위험 |
+| --- | --- | --- |
+| Trip | `installation_id`, `status`, `end_reason`, `payload_hash` 등 | 다른 설치가 기존 주행 기록을 가로챔 |
+| MissionResult | `trip_id`, `mission_id`, `status` 등 | 수행 기록이 다른 Trip으로 옮겨감 |
+
+동기화 서비스는 `save()`에 재전송 판별을 맡기지 않고 기존 행을 조회해 판정한 뒤 INSERT 전용 방식으로 저장해야 합니다. 판정할 때는 소유권 확인을 payload 비교보다 먼저 수행하며, MissionResult UUID는 Trip의 `payload_hash`와 별개로 기존 행의 `trip_id`를 확인합니다.
+
+동기화 서비스 통합 테스트는 최소한 다음 경우를 검증합니다.
+
+| 상황 | 기대 결과 |
+| --- | --- |
+| 같은 Installation이 같은 UUID와 같은 payload를 재전송 | 중복 저장 없이 성공 처리 |
+| 같은 Installation이 같은 Trip UUID에 다른 payload를 전송 | 충돌로 처리하고 기존 행 유지 |
+| 저장된 MissionResult UUID가 다른 Trip으로 전달 | 거부하고 기존 행 유지 |
+| 다른 Installation이 저장된 Trip UUID를 전송 | payload가 같아도 거부하고 기존 행 유지 |
+| 같은 Trip을 동시에 재전송 | 한 건만 저장하고 나머지는 위 규칙으로 판정 |
+| Trip과 MissionResult 저장 중 일부 실패 | 일부만 남지 않도록 한 트랜잭션으로 저장 |
 
 ### 참여 여부와 정답 여부 분리
 
@@ -239,6 +271,9 @@ SHA-256 해시 컬럼은 PostgreSQL `CHAR(64)`를 사용합니다. Hibernate 7�
 - Trip 상태와 종료 사유 조합 검증
 - Trip과 Mission의 MissionPack 일치 검증
 - MissionResult와 Trip의 시간 범위 검증
+- 비정상 종료 Trip의 종료 시각과 사유 복구 기준
+- Trip과 MissionResult 재전송 처리와 통합 테스트
+- MissionPack 발행 시 최소 미션 수 정책
 
 제외 항목은 스키마 누락이 아니라 정책 또는 API 흐름이 확정된 뒤 구현할 의도적인 후속 범위입니다.
 

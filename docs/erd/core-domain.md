@@ -6,7 +6,7 @@
 erDiagram
     INSTALLATIONS ||--o| COPILOTS : owns
     INSTALLATIONS ||--o{ TRIPS : records
-    MISSION_PACKS ||--|{ MISSIONS : contains
+    MISSION_PACKS ||--o{ MISSIONS : contains
     MISSION_PACKS ||--o{ TRIPS : used_by
     TRIPS ||--o{ MISSION_RESULTS : contains
     MISSIONS ||--o{ MISSION_RESULTS : produces
@@ -70,4 +70,4 @@ erDiagram
     }
 ```
 
-`mission_packs`의 `(code, version)`과 `missions`의 `(mission_pack_id, code)`는 각각 복합 UNIQUE 제약조건입니다. `MissionVoiceResponse`는 음성 저장 정책이 확정된 뒤 `MissionResult`와 1:N 관계로 추가할 확장 대상이며 현재 스키마에는 포함하지 않습니다.
+`mission_packs`의 `(code, version)`과 `missions`의 `(mission_pack_id, code)`는 각각 복합 UNIQUE 제약조건입니다. `MissionVoiceResponse`는 음성 저장 정책이 확정된 뒤 `MissionResult`와 1:N 관계로 추가할 확장 대상이며 현재 스키마에는 포함하지 않습니다. 스키마는 미션이 없는 MissionPack을 허용하며, 발행 시 최소 미션 수는 [핵심 도메인 설계](../architecture/core-domain-design.md)의 후속 범위입니다.
