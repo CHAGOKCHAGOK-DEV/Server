@@ -48,7 +48,7 @@ Windows PowerShell에서는 `./gradlew` 대신 `./gradlew.bat`을 사용할 수 
 
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
-- Health Check: `http://localhost:8080/actuator/health`
+- Health Check: `http://localhost:8080/api/v1/health` (서비스 상태), `http://localhost:8080/actuator/health` (DB 연결 포함)
 
 ## 프로젝트 구조
 
@@ -69,6 +69,39 @@ src/main/java/com/chagokchagok/server
 | `prod` | PostgreSQL | 사용 | validate |
 
 운영 환경에서는 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_ACCESS_TOKEN_EXPIRATION`, `JWT_REFRESH_TOKEN_EXPIRATION`을 주입해야 합니다.
+
+## 배포
+
+`develop`에 push되어 CI가 성공하면 CD 워크플로가 실행됩니다. Actions 탭에서 수동으로 실행할 수도 있습니다.
+
+1. 해당 커밋으로 Docker 이미지를 빌드해 GitHub Container Registry(`ghcr.io`)에 푸시합니다.
+2. SSH로 EC2에 접속해 [scripts/deploy.sh](scripts/deploy.sh)로 컨테이너를 교체합니다.
+3. `/actuator/health`가 응답하지 않으면 직전 이미지로 되돌리고 워크플로를 실패 처리합니다.
+
+### GitHub Secrets
+
+| 이름 | 값 |
+| --- | --- |
+| `EC2_HOST` | EC2 공인 IP 또는 도메인 |
+| `EC2_SSH_KEY` | EC2 접속용 개인 키(`.pem`) 전체 내용 |
+
+### EC2 환경 변수
+
+운영 환경 변수는 저장소나 GitHub에 두지 않고 EC2의 `~/chagokchagok/.env`에만 둡니다.
+
+```text
+SPRING_PROFILES_ACTIVE=prod
+DB_URL=jdbc:postgresql://<RDS 엔드포인트>:5432/chagokchagok?sslmode=require
+DB_USERNAME=
+DB_PASSWORD=
+JWT_SECRET=
+JWT_ACCESS_TOKEN_EXPIRATION=3600000
+JWT_REFRESH_TOKEN_EXPIRATION=1209600000
+TZ=Asia/Seoul
+JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50
+```
+
+배포 후 Swagger UI는 `http://<EC2_HOST>/swagger-ui.html`에서 확인할 수 있습니다.
 
 ## 협업 규칙
 
