@@ -16,8 +16,10 @@
 | Mission | BIGINT | DB | 서버 내부에서 관리하는 미션 정의 식별 |
 | Trip | UUID | Android | 오프라인 상태에서 주행 시작과 동시에 식별자 생성 |
 | MissionResult | UUID | Android | 오프라인 상태에서 각 미션 수행 건의 식별자 생성 |
+| AgreementDocument | BIGINT | DB | 서버에서 관리하는 동의문 버전 식별 |
+| AgreementHistory | UUID | Android | 로컬 동의 이벤트를 같은 ID로 재전송 |
 
-UUID PK는 Installation, Copilot, Trip, MissionResult에 적용하고 BIGINT PK는 MissionPack과 Mission에 적용합니다. Copilot은 별도의 UUID를 생성하지 않고 Installation의 UUID를 PK이자 FK로 공유합니다.
+UUID PK는 Installation, Copilot, Trip, MissionResult, AgreementHistory에 적용하고 BIGINT PK는 MissionPack, Mission, AgreementDocument에 적용합니다. Copilot은 별도의 UUID를 생성하지 않고 Installation의 UUID를 PK이자 FK로 공유합니다. AgreementHistory UUID는 중복 행 방지의 기반이며, 소유권과 재전송 내용 비교는 후속 서비스에서 별도로 검증합니다.
 
 ## 3. Offline-first 동기화
 
@@ -95,5 +97,7 @@ MissionPack의 비즈니스 식별 기준은 PK가 아니라 `(code, version)` U
 - Mission: DB 생성 BIGINT 유지
 - Trip: Android 생성 UUID 유지
 - MissionResult: Android 생성 UUID 유지
+- AgreementDocument: DB 생성 BIGINT 사용
+- AgreementHistory: Android 생성 UUID 사용
 
 Offline-first 데이터에는 클라이언트 생성 UUID를 사용하고 서버 관리 콘텐츠에는 BIGINT를 사용하는 혼합 전략을 유지합니다.

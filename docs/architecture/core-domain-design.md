@@ -2,13 +2,14 @@
 
 ## 1. 문서 목적
 
-이 문서는 Installation, Copilot, MissionPack, Mission, Trip, MissionResult의 책임과 관계, 데이터베이스 제약조건을 선택한 이유를 기록합니다. 단순 컬럼 명세보다 변경 시 지켜야 할 불변식과 아직 서비스 계층에서 구현하지 않은 정책을 구분하는 데 목적이 있습니다.
+이 문서는 Installation, Copilot, MissionPack, Mission, Trip, MissionResult, AgreementDocument, AgreementHistory의 총 8개 엔티티 책임과 관계, 데이터베이스 제약조건을 선택한 이유를 기록합니다. 단순 컬럼 명세보다 변경 시 지켜야 할 불변식과 아직 서비스 계층에서 구현하지 않은 정책을 구분하는 데 목적이 있습니다.
 
 관련 문서:
 
 - [핵심 도메인 ERD](../erd/core-domain.md)
 - [핵심 도메인 식별자 설계](../erd/id-strategy.md)
 - [초기 Flyway 마이그레이션](../../src/main/resources/db/migration/V1__create_core_domain.sql)
+- [동의 도메인과 화면 계약](./agreement-domain-design.md)
 
 ## 문서 구성
 
@@ -68,6 +69,8 @@ NULL 여부, 참조 무결성, 단일 프로필, 코드 중복, Enum 허용값, 
 | Mission | 미션 발동 조건과 연령대별 콘텐츠 정의 | MissionPack N:1, MissionResult 1:N |
 | Trip | Android가 생성한 종료 주행 기록 | Installation N:1, MissionPack N:1, MissionResult 1:N |
 | MissionResult | 한 번의 미션 수행 결과 | Trip N:1, Mission N:1 |
+| AgreementDocument | 사용자에게 제시한 약관·동의문 원문과 버전 관리 | AgreementHistory 1:N |
+| AgreementHistory | 설치 단위의 동의·철회 이벤트 기록 | Installation N:1, AgreementDocument N:1 |
 
 JPA 연관관계는 자식에서 부모를 참조하는 단방향 매핑을 기본으로 사용합니다. 부모 컬렉션을 항상 유지하지 않아도 FK로 관계를 표현할 수 있고, 불필요한 양방향 연관관계 관리와 대량 컬렉션 로딩을 피하기 위한 선택입니다.
 
@@ -212,6 +215,8 @@ Trip과 MissionResult 모두 `ended_at >= started_at`을 DB CHECK 제약으로 �
 - Installation과 Copilot: UUID
 - Trip과 MissionResult: Android 생성 UUID
 - MissionPack과 Mission: DB 생성 BIGINT IDENTITY
+- AgreementDocument: DB 생성 BIGINT IDENTITY
+- AgreementHistory: Android 생성 UUID, 재전송에도 동일 이벤트 ID 유지
 
 Trip과 MissionResult는 Offline-first 동기화를 위해 서버 연결 없이 식별자를 생성해야 합니다. MissionPack과 Mission은 서버 내부 콘텐츠이므로 BIGINT가 단순합니다. 세부 판단과 대안은 [핵심 도메인 식별자 설계](../erd/id-strategy.md)에 기록합니다.
 
@@ -219,7 +224,7 @@ Trip과 MissionResult는 Offline-first 동기화를 위해 서버 연결 없이 
 
 Java에서는 `Instant`, PostgreSQL에서는 `TIMESTAMPTZ`를 사용해 절대 시점을 저장합니다. 지역 날짜 기준 집계가 필요하면 조회 또는 집계 계층에서 Asia/Seoul 기준으로 변환합니다.
 
-Installation, Copilot, MissionPack, Mission은 생성 및 수정 시각을 저장합니다. Trip과 MissionResult는 서버에 최종 기록으로 저장한 뒤 수정하지 않는 모델이므로 생성 시각만 저장합니다. 정정 기능을 도입한다면 수정 허용 범위와 감사 이력을 먼저 설계해야 합니다.
+Installation, Copilot, MissionPack, Mission, AgreementDocument는 생성 및 수정 시각을 저장합니다. Trip, MissionResult, AgreementHistory는 서버에 최종 기록으로 저장한 뒤 수정하지 않는 모델이므로 생성 시각만 저장합니다. AgreementHistory의 `occurred_at`은 실제 행위 시각이고 `created_at`은 서버 기록 시각이므로 구분합니다. 정정 기능을 도입한다면 수정 허용 범위와 감사 이력을 먼저 설계해야 합니다.
 
 JPA Auditing이 애플리케이션 INSERT와 UPDATE의 시각을 채우고 DB의 `now()` 기본값은 직접 SQL 입력에 대한 보조 장치로 사용합니다. DB 기본값만으로는 UPDATE 시각이 자동 갱신되지 않습니다.
 
@@ -240,6 +245,8 @@ PK와 UNIQUE 제약은 PostgreSQL이 고유 인덱스를 생성하므로 같은 
 | `(trips.installation_id, started_at DESC)` | 설치별 최신 주행 이력 조회 |
 | `(mission_results.trip_id)` | 주행 상세 결과 조회 |
 | `(mission_results.mission_id)` | 미션별 수행 결과 조회 |
+| `(agreement_histories.installation_id, created_at DESC)` | 설치별 최신 서버 기록 이력 조회 |
+| `(agreement_histories.agreement_document_id)` | 문서 버전별 동의·철회 이력 조회 |
 
 실제 Repository 조회 패턴이 달라지면 실행 계획과 데이터 분포를 확인한 뒤 인덱스를 조정합니다.
 
@@ -274,6 +281,8 @@ SHA-256 해시 컬럼은 PostgreSQL `CHAR(64)`를 사용합니다. Hibernate 7�
 - 비정상 종료 Trip의 종료 시각과 사유 복구 기준
 - Trip과 MissionResult 재전송 처리와 통합 테스트
 - MissionPack 발행 시 최소 미션 수 정책
+- 동의 API, 발행 문서 수정 차단, 현재 동의 상태 판정과 이벤트 재전송 처리
+- 실제 동의 대상 확정과 법정대리인 확인 절차
 
 제외 항목은 스키마 누락이 아니라 정책 또는 API 흐름이 확정된 뒤 구현할 의도적인 후속 범위입니다.
 

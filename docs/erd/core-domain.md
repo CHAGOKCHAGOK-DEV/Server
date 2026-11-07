@@ -6,11 +6,35 @@
 erDiagram
     INSTALLATIONS ||--o| COPILOTS : owns
     INSTALLATIONS ||--o{ TRIPS : records
+    INSTALLATIONS ||--o{ AGREEMENT_HISTORIES : records
+    AGREEMENT_DOCUMENTS ||--o{ AGREEMENT_HISTORIES : referenced_by
     MISSION_PACKS ||--o{ MISSIONS : contains
     MISSION_PACKS ||--o{ TRIPS : used_by
     TRIPS ||--o{ MISSION_RESULTS : contains
     MISSIONS ||--o{ MISSION_RESULTS : produces
 
+    AGREEMENT_DOCUMENTS {
+        bigint id PK
+        varchar code UK
+        integer version UK
+        varchar title
+        text content
+        boolean is_required
+        varchar status
+        timestamptz effective_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    AGREEMENT_HISTORIES {
+        uuid id PK
+        uuid installation_id FK
+        bigint agreement_document_id FK
+        varchar action
+        timestamptz occurred_at
+        timestamptz created_at
+        varchar verification_method
+        timestamptz verified_at
+    }
     INSTALLATIONS {
         uuid id PK
         char token_hash UK
@@ -69,5 +93,7 @@ erDiagram
         timestamptz created_at
     }
 ```
+
+`agreement_documents`의 `(code, version)`은 복합 UNIQUE 제약입니다. 동의 이력은 프로필 생성 전에도 남겨야 하므로 Copilot과 직접 연결하지 않습니다. 상세 명세와 미구현 정책은 [동의 도메인과 화면 계약](../architecture/agreement-domain-design.md)에 기록합니다.
 
 `mission_packs`의 `(code, version)`과 `missions`의 `(mission_pack_id, code)`는 각각 복합 UNIQUE 제약조건입니다. `MissionVoiceResponse`는 음성 저장 정책이 확정된 뒤 `MissionResult`와 1:N 관계로 추가할 확장 대상이며 현재 스키마에는 포함하지 않습니다. 스키마는 미션이 없는 MissionPack을 허용하며, 발행 시 최소 미션 수는 [핵심 도메인 설계](../architecture/core-domain-design.md)의 후속 범위입니다.
