@@ -35,7 +35,7 @@
 | 단일 프로필 | Copilot이 Installation UUID를 공유 PK로 사용 | 확정 |
 | 미션 콘텐츠 | MissionPack 버전과 Mission JSONB로 관리 | 확정 |
 | 오프라인 기록 | Trip과 MissionResult에 Android 생성 UUID 사용 | 확정 |
-| 동기화 충돌 | 동일 UUID의 payload 정규화 및 hash 비교 | 후속 구현 |
+| 동기화 충돌 | 동일 UUID의 payload 정규화 및 hash 비교 | 동기화 API 구현 |
 | 콘텐츠 불변성 | 발행된 MissionPack과 Mission의 수정 차단 | 후속 구현 |
 | 비정상 종료 복구 | Android 동기화 계약에서 종료 시각과 사유의 복구 기준 확정 | 정책 확정 후 구현 |
 | 음성 저장 | MissionVoiceResponse 별도 엔티티로 확장 | 정책 확정 후 구현 |
@@ -135,7 +135,7 @@ Trip 상태는 `COMPLETED`, `INTERRUPTED`이고 종료 사유는 다음 값을 �
 - 정상 종료 후보: `PARKING_BRAKE`, `STOP_TIMEOUT`, `MANUAL_STOP`
 - 중단 종료 후보: `APP_INTERRUPTED`, `SDK_DISCONNECTED`, `UNKNOWN`
 
-DB는 각 Enum의 허용값만 검증합니다. `COMPLETED`와 중단 사유처럼 의미가 맞지 않는 조합은 주행 동기화 서비스에서 거부해야 합니다.
+DB는 각 Enum의 허용값만 검증합니다. 주행 동기화 서비스는 `COMPLETED`에 정상 종료 사유만, `INTERRUPTED`에 중단 사유만 허용합니다.
 
 ### 비정상 종료 Trip의 복구 기준은 미확정
 
@@ -150,7 +150,7 @@ DB는 각 Enum의 허용값만 검증합니다. `COMPLETED`와 중단 사유처�
 
 Trip은 수행 당시 사용한 MissionPack을 NOT NULL FK로 참조합니다. 서버의 최신 미션팩이 바뀌어도 과거 주행이 어떤 콘텐츠 버전을 기준으로 실행됐는지 추적할 수 있습니다.
 
-MissionResult의 Mission이 Trip의 MissionPack에 속하는지는 두 개의 독립 FK만으로 보장되지 않습니다. 동기화 서비스는 다음 관계가 동일한 MissionPack을 가리키는지 확인해야 합니다.
+MissionResult의 Mission이 Trip의 MissionPack에 속하는지는 두 개의 독립 FK만으로 보장되지 않습니다. 동기화 서비스는 요청한 미션팩 코드·버전에 속한 미션 코드만 조회하여 다음 관계가 동일한 MissionPack을 가리키도록 검증합니다.
 
 ```text
 MissionResult -> Mission -> MissionPack
@@ -167,7 +167,7 @@ MissionResult PK는 Android가 생성한 UUID입니다. 한 Trip에서 같은 Mi
 
 `trips.payload_hash`는 동일 Trip UUID로 받은 데이터가 기존 저장 내용과 같은지 판단하기 위한 SHA-256 해시입니다. 서로 다른 Trip이 같은 결과를 가질 수 있으므로 UNIQUE 제약을 두지 않습니다.
 
-해시는 위변조 방지나 요청 인증 수단이 아닙니다. 동기화 API에서 Trip과 MissionResult 목록을 결정적인 순서와 표현으로 정규화한 뒤 서버가 계산해야 합니다. 구체적인 정규화 범위와 배열 정렬 규칙은 동기화 API 계약에서 확정합니다.
+해시는 위변조 방지나 요청 인증 수단이 아닙니다. 동기화 API는 주행 전체와 결과 목록을 UUID 순서로 정규화한 뒤 서버에서 계산합니다. 구체적인 정규화 범위와 배열 정렬 규칙은 [동기화 API 계약](../api/trip-sync.md)에 정의합니다.
 
 ### 재전송 처리 주의사항
 
@@ -178,7 +178,7 @@ Trip과 MissionResult는 저장 뒤 수정하지 않는 모델이므로 재전�
 | Trip | `installation_id`, `status`, `end_reason`, `payload_hash` 등 | 다른 설치가 기존 주행 기록을 가로챔 |
 | MissionResult | `trip_id`, `mission_id`, `status` 등 | 수행 기록이 다른 Trip으로 옮겨감 |
 
-동기화 서비스는 `save()`에 재전송 판별을 맡기지 않고 기존 행을 조회해 판정한 뒤 INSERT 전용 방식으로 저장해야 합니다. 판정할 때는 소유권 확인을 payload 비교보다 먼저 수행하며, MissionResult UUID는 Trip의 `payload_hash`와 별개로 기존 행의 `trip_id`를 확인합니다.
+현재 동기화 서비스는 `save()` 대신 PostgreSQL `INSERT ON CONFLICT DO NOTHING`으로 저장합니다. Trip의 소유권을 hash보다 먼저 확인하며 기존 Trip의 다른 내용은 409로 처리합니다. 새 Trip에 이미 사용된 MissionResult UUID가 전달되면 결과 PK 충돌로 요청 전체를 롤백합니다. 상세 규격과 테스트 실행 방법은 [주행·미션 결과 동기화 API](../api/trip-sync.md)에 기록합니다.
 
 동기화 서비스 통합 테스트는 최소한 다음 경우를 검증합니다.
 
@@ -206,7 +206,7 @@ DB는 `participated = false`인 경우 `is_correct`가 NULL이도록 제한합�
 
 ### 시간 범위 검증
 
-Trip과 MissionResult 모두 `ended_at >= started_at`을 DB CHECK 제약으로 보장합니다. MissionResult 시간이 소속 Trip 범위 안에 있는지는 다른 행을 함께 확인해야 하므로 서비스 계층 검증 대상입니다. SDK 중단과 취소 기록 시각 사이의 허용 오차는 Android 계약이 확정된 뒤 정의합니다.
+Trip과 MissionResult 모두 `ended_at >= started_at`을 DB CHECK 제약으로 보장합니다. 동기화 서비스는 모든 MissionResult의 구간이 Trip 구간 안에 포함되는지도 검증합니다. 현재 별도 시간 오차를 허용하지 않으며 SDK 중단과 취소 기록에 오차가 필요하다면 Android 계약을 확정한 뒤 변경합니다.
 
 ## 7. 식별자 전략
 
@@ -274,12 +274,7 @@ SHA-256 해시 컬럼은 PostgreSQL `CHAR(64)`를 사용합니다. Hibernate 7�
 - 음성 파일과 STT 원문 저장
 - 설치 토큰 만료, 회전 및 이력
 - MissionPack 발행 이후 불변성 서비스 로직
-- Trip 동기화 payload 정규화와 해시 계산
-- Trip 상태와 종료 사유 조합 검증
-- Trip과 Mission의 MissionPack 일치 검증
-- MissionResult와 Trip의 시간 범위 검증
 - 비정상 종료 Trip의 종료 시각과 사유 복구 기준
-- Trip과 MissionResult 재전송 처리와 통합 테스트
 - MissionPack 발행 시 최소 미션 수 정책
 - 동의 API, 발행 문서 수정 차단, 현재 동의 상태 판정과 이벤트 재전송 처리
 - 실제 동의 대상 확정과 법정대리인 확인 절차
