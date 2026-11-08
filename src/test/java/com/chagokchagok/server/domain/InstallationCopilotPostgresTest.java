@@ -1,6 +1,7 @@
 package com.chagokchagok.server.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.chagokchagok.server.domain.copilot.repository.CopilotRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -41,6 +44,7 @@ class InstallationCopilotPostgresTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @MockitoSpyBean CopilotRepository copilots;
 
     @BeforeEach
     void clean() {
@@ -69,5 +73,25 @@ class InstallationCopilotPostgresTest {
                 .header("Authorization", "Bearer " + token)).andExpect(status().isOk());
         mvc.perform(get("/api/v1/copilot").header("X-Installation-Id", id)
                 .header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void duplicateInsertAfterStaleExistsCheckReturnsCopilotConflict() throws Exception {
+        String registration = mvc.perform(post("/api/v1/installations"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID id = UUID.fromString(JsonPath.read(registration, "$.data.installationId"));
+        String token = JsonPath.read(registration, "$.data.token");
+        String body = "{\"nickname\":\"부기장1\",\"ageGroup\":\"AGE_5_6\",\"missionIntensity\":\"NORMAL\"}";
+
+        // 두 요청이 모두 사전 조회를 통과한 경합을 재현한다.
+        doReturn(false).when(copilots).existsById(id);
+        mvc.perform(post("/api/v1/copilot").header("X-Installation-Id", id)
+                .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/v1/copilot").header("X-Installation-Id", id)
+                .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("COPILOT_409"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM copilots WHERE installation_id = ?", Integer.class, id))
+                .isEqualTo(1);
     }
 }

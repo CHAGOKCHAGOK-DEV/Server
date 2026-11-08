@@ -11,6 +11,7 @@ import com.chagokchagok.server.global.exception.GeneralException;
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,9 +33,27 @@ public class CopilotService {
         Copilot copilot = new Copilot(installation, request.nickname(), request.ageGroup());
         copilot.update(request.nickname(), request.ageGroup(), request.missionIntensity());
         // Assigned UUID를 가진 엔티티에서 save()/merge()가 기존 프로필을 덮어쓰지 않도록 INSERT만 수행한다.
-        entityManager.persist(copilot);
-        entityManager.flush();
+        try {
+            entityManager.persist(copilot);
+            entityManager.flush();
+        } catch (RuntimeException exception) {
+            if (isDuplicateCopilot(exception)) {
+                throw new GeneralException(CopilotErrorCode.ALREADY_EXISTS);
+            }
+            throw exception;
+        }
         return CopilotResponse.from(copilot);
+    }
+
+    private boolean isDuplicateCopilot(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation
+                    && "pk_copilots".equalsIgnoreCase(violation.getConstraintName())
+                    && "23505".equals(violation.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Transactional(readOnly = true)
