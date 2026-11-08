@@ -42,6 +42,8 @@ Windows PowerShell에서는 `./gradlew` 대신 `./gradlew.bat`을 사용할 수 
 ./gradlew test
 ```
 
+주행 동기화의 PostgreSQL 통합 테스트는 기본 `test`에 포함되지 않으며, 전용 DB를 준비한 뒤 `./gradlew postgresTest`로 실행합니다. 환경 변수와 실행 절차는 [주행 동기화 API 문서](docs/api/trip-sync.md#검증-실행)를 참고하세요. CI에서는 빌드·일반 테스트와 PostgreSQL 통합 테스트를 모두 실행합니다.
+
 ## API 문서
 
 로컬 서버 실행 후 아래 주소에서 확인할 수 있습니다.
@@ -72,7 +74,7 @@ src/main/java/com/chagokchagok/server
 
 ## 배포
 
-`develop`에 push되어 CI가 성공하면 CD 워크플로가 실행됩니다. Actions 탭에서 수동으로 실행할 수도 있습니다.
+`develop`에 push되어 빌드·일반 테스트·PostgreSQL 통합 테스트가 모두 성공하면 CD 워크플로가 실행됩니다. Actions 탭에서 수동으로 실행할 수도 있습니다.
 
 1. 해당 커밋으로 Docker 이미지를 빌드해 GitHub Container Registry(`ghcr.io`)에 푸시합니다.
 2. SSH로 EC2에 접속해 [scripts/deploy.sh](scripts/deploy.sh)로 컨테이너를 교체합니다.

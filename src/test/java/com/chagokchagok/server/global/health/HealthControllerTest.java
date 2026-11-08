@@ -30,6 +30,13 @@ class HealthControllerTest {
     }
 
     @Test
+    void 설치_인증_없이_DB_헬스_체크를_조회한다() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
     void API_문서에_헬스_체크_경로가_포함된다() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
             .andExpect(status().isOk())
