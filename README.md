@@ -48,6 +48,8 @@ Windows PowerShell에서는 `./gradlew` 대신 `./gradlew.bat`을 사용할 수 
 
 로컬 서버 실행 후 아래 주소에서 확인할 수 있습니다.
 
+앱 설치 등록·인증과 단일 부기장 프로필 API는 [설치 및 부기장 API 문서](docs/api/installation-copilot.md)를 참고하세요.
+
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 - Health Check: `http://localhost:8080/api/v1/health` (서비스 상태), `http://localhost:8080/actuator/health` (DB 연결 포함)

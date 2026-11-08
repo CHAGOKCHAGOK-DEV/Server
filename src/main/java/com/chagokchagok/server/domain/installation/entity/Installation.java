@@ -38,4 +38,8 @@ public class Installation extends BaseTimeEntity {
         this.status = InstallationStatus.ACTIVE;
     }
 
+    public void revoke() {
+        this.status = InstallationStatus.REVOKED;
+    }
+
 }
