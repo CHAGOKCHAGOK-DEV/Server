@@ -26,8 +26,8 @@ public class SwaggerConfig {
         return new OpenAPI()
             .info(
                 new Info()
-                    .title("Spring Backend Template API")
-                    .description("Spring Backend Template API Documentation")
+                    .title("차곡차곡 API")
+                    .description("차곡차곡 서버 API 문서")
                     .version("v1")
             )
             .components(

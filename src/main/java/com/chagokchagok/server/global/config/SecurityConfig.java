@@ -29,7 +29,8 @@ public class SecurityConfig {
         "/swagger-ui/**",
         "/swagger-ui.html",
         "/v3/api-docs/**",
-        "/actuator/health"
+        "/actuator/health",
+        "/api/v1/health"
     };
 
     // 인코딩 경로 우회 방지를 위해 MVC와 같은 디코딩 경로 기준 매칭
