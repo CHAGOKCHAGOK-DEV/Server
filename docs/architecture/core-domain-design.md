@@ -222,7 +222,7 @@ Trip과 MissionResult는 Offline-first 동기화를 위해 서버 연결 없이 
 
 ## 8. 시각과 변경 이력
 
-Java에서는 `Instant`, PostgreSQL에서는 `TIMESTAMPTZ`를 사용해 절대 시점을 저장합니다. 지역 날짜 기준 집계가 필요하면 조회 또는 집계 계층에서 Asia/Seoul 기준으로 변환합니다.
+Java에서는 `Instant`, PostgreSQL에서는 `TIMESTAMPTZ`를 사용해 절대 시점을 저장합니다. 지역 날짜 기준 집계가 필요하면 조회 또는 집계 계층에서 Asia/Seoul 기준으로 변환합니다. 일일 미션 진행은 각 MissionResult의 `started_at`을 기준으로 날짜를 정합니다.
 
 Installation, Copilot, MissionPack, Mission, AgreementDocument는 생성 및 수정 시각을 저장합니다. Trip, MissionResult, AgreementHistory는 서버에 최종 기록으로 저장한 뒤 수정하지 않는 모델이므로 생성 시각만 저장합니다. AgreementHistory의 `occurred_at`은 실제 행위 시각이고 `created_at`은 서버 기록 시각이므로 구분합니다. 정정 기능을 도입한다면 수정 허용 범위와 감사 이력을 먼저 설계해야 합니다.
 
@@ -242,13 +242,15 @@ PK와 UNIQUE 제약은 PostgreSQL이 고유 인덱스를 생성하므로 같은 
 | --- | --- |
 | `(mission_packs.status, version DESC)` | 배포 상태별 최신 버전 조회 |
 | `(missions.mission_pack_id)` | 미션팩 소속 미션 조회 |
-| `(trips.installation_id, started_at DESC)` | 설치별 최신 주행 이력 조회 |
-| `(mission_results.trip_id)` | 주행 상세 결과 조회 |
+| `(trips.installation_id, started_at DESC)` | 설치별 주행 목록 커서 조회와 일일 진행 집계의 Trip 범위 탐색 |
+| `(mission_results.trip_id)` | 주행 상세 결과 조회와 주행별 결과 요약 집계 |
 | `(mission_results.mission_id)` | 미션별 수행 결과 조회 |
 | `(agreement_histories.installation_id, created_at DESC)` | 설치별 최신 서버 기록 이력 조회 |
 | `(agreement_histories.agreement_document_id)` | 문서 버전별 동의·철회 이력 조회 |
 
 실제 Repository 조회 패턴이 달라지면 실행 계획과 데이터 분포를 확인한 뒤 인덱스를 조정합니다.
+
+주행 목록은 `(started_at, id)` 커서를 사용하지만 같은 시작 시각이 드물어 `id`를 인덱스에 추가하지 않았습니다. 조회별 인덱스 사용과 재검토 조건은 [주행 이력·일일 미션 진행 조회](../api/trip-history.md#조회-쿼리와-인덱스)에 기록합니다.
 
 ## 11. Flyway와 JPA 스키마 검증
 
