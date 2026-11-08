@@ -18,6 +18,21 @@ jobs:
     permissions:
       contents: read
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: trip_sync_test
+          POSTGRES_USER: sync_test
+          POSTGRES_PASSWORD: ci-throwaway-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sync_test -d trip_sync_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,3 +51,10 @@ jobs:
 
       - name: Build and test
         run: ./gradlew clean build --no-daemon
+
+      - name: PostgreSQL integration test
+        env:
+          PG_TEST_URL: jdbc:postgresql://localhost:5432/trip_sync_test
+          PG_TEST_USERNAME: sync_test
+          PG_TEST_PASSWORD: ci-throwaway-password
+        run: ./gradlew postgresTest --no-daemon

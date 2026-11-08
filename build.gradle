@@ -64,4 +64,21 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+    exclude '**/*PostgresTest.class'
+}
+
+tasks.register('postgresTest', Test) {
+    description = 'Runs trip synchronization integration tests against a dedicated PostgreSQL database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    include '**/*PostgresTest.class'
+    doFirst {
+        if (!System.getenv('PG_TEST_URL') || !System.getenv('PG_TEST_USERNAME') || !System.getenv('PG_TEST_PASSWORD')) {
+            throw new GradleException('PG_TEST_URL, PG_TEST_USERNAME and PG_TEST_PASSWORD must point to a dedicated test database.')
+        }
+    }
+    outputs.upToDateWhen { false }
+    shouldRunAfter tasks.named('test')
 }
