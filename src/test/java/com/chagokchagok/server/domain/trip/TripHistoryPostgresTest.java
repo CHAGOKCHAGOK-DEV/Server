@@ -13,9 +13,9 @@ import com.jayway.jsonpath.JsonPath;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
@@ -302,14 +302,61 @@ class TripHistoryPostgresTest {
             own(get(PROGRESS).param("date", date)).andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("COMMON_400_3"));
         }
-        for (String date : List.of("0001-01-01", "1500-03-10", "1582-12-31", "+10000-01-01")) {
+        for (String date : List.of("0000-12-31", "+10000-01-01")) {
             own(get(PROGRESS).param("date", date)).andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("COMMON_400"));
         }
-        for (String date : List.of("1583-01-01", "9999-12-31")) {
+        for (String date : List.of("0001-01-01", "1500-03-10", "1582-10-10", "1582-12-31", "9999-12-31")) {
             own(get(PROGRESS).param("date", date)).andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.missionResultCount").value(0));
         }
+    }
+
+    @Test
+    void preGregorianInstantsRoundTripExactlyThroughListCursorDetailAndDailyProgress() throws Exception {
+        // Asia/Seoul LMT 기준 1500-03-11 자정이자 기존 UTC Timestamp 바인딩의 Julian 1500-02-29 표기 시각
+        Instant early = LocalDate.of(1500, 3, 11).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
+        assertThat(early).isEqualTo(Instant.parse("1500-03-10T15:32:08Z"));
+        Instant first = Instant.parse("0001-01-01T00:00:00Z");
+        trip(id(2), INSTALLATION, early);
+        trip(id(1), INSTALLATION, early.minusSeconds(3600), early.plusSeconds(3600));
+        trip(id(3), INSTALLATION, first);
+        result(id(11), id(1), 1, "COMPLETED", true, true, early.minusNanos(1_000));
+        result(id(12), id(1), 1, "COMPLETED", true, false, early);
+        result(id(13), id(2), 2, "EXPIRED", false, null, early);
+        result(id(14), id(3), 1, "COMPLETED", true, true, first);
+
+        own(get("/api/v1/trips")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].tripId", contains(id(2).toString(), id(1).toString(), id(3).toString())))
+                .andExpect(jsonPath("$.data.items[0].startedAt").value("1500-03-10T15:32:08Z"))
+                .andExpect(jsonPath("$.data.items[1].startedAt").value("1500-03-10T14:32:08Z"))
+                .andExpect(jsonPath("$.data.items[1].endedAt").value("1500-03-10T16:32:08Z"))
+                .andExpect(jsonPath("$.data.items[2].startedAt").value("0001-01-01T00:00:00Z"));
+        Page firstPage = page(null, 1);
+        assertThat(firstPage.ids()).containsExactly(id(2).toString());
+        Page second = page(firstPage.nextCursor(), 1);
+        assertThat(second.ids()).containsExactly(id(1).toString());
+        Page third = page(second.nextCursor(), 1);
+        assertThat(third.ids()).containsExactly(id(3).toString());
+        assertThat(third.nextCursor()).isNull();
+        own(get("/api/v1/trips").param("cursor", new TripHistoryCursor(early, id(2)).encode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[*].tripId", contains(id(1).toString(), id(3).toString())));
+        own(get("/api/v1/trips/{tripId}", id(1))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.missionResults[0].startedAt").value("1500-03-10T15:32:07.999999Z"))
+                .andExpect(jsonPath("$.data.missionResults[0].endedAt").value("1500-03-10T15:32:12.999999Z"))
+                .andExpect(jsonPath("$.data.missionResults[1].startedAt").value("1500-03-10T15:32:08Z"));
+        own(get(PROGRESS).param("date", "1500-03-10")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.contributingTripCount").value(1))
+                .andExpect(jsonPath("$.data.missionResultCount").value(1));
+        own(get(PROGRESS).param("date", "1500-03-11")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.contributingTripCount").value(2))
+                .andExpect(jsonPath("$.data.missionResultCount").value(2))
+                .andExpect(jsonPath("$.data.expiredCount").value(1));
+        // 기원전으로 넘어가는 Seoul LMT 하루 시작 바인딩 확인
+        own(get(PROGRESS).param("date", "0001-01-01")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.contributingTripCount").value(1))
+                .andExpect(jsonPath("$.data.missionResultCount").value(1));
     }
 
     private Page page(String cursor, int size) throws Exception {
@@ -349,7 +396,7 @@ class TripHistoryPostgresTest {
         jdbc.update("""
                 INSERT INTO trips(id, installation_id, mission_pack_id, status, end_reason, started_at, ended_at, payload_hash)
                 VALUES (?, ?, 1, 'COMPLETED', 'MANUAL_STOP', ?, ?, ?)
-                """, id, installation, Timestamp.from(start), Timestamp.from(end), "0".repeat(64));
+                """, id, installation, start.atOffset(ZoneOffset.UTC), end.atOffset(ZoneOffset.UTC), "0".repeat(64));
     }
 
     private void result(UUID id, UUID trip, long missionId, String status, boolean participated, Boolean correct,
@@ -362,7 +409,8 @@ class TripHistoryPostgresTest {
         jdbc.update("""
                 INSERT INTO mission_results(id, trip_id, mission_id, status, participated, is_correct, started_at, ended_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, id, trip, missionId, status, participated, correct, Timestamp.from(start), Timestamp.from(end));
+                """, id, trip, missionId, status, participated, correct, start.atOffset(ZoneOffset.UTC),
+                end.atOffset(ZoneOffset.UTC));
     }
 
     private String hash(String token) throws Exception {

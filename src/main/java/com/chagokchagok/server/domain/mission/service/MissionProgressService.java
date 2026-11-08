@@ -20,8 +20,8 @@ public class MissionProgressService {
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     // 달성 인정 정책 미확정으로 목표값과 원시 건수만 제공
     private static final int DAILY_GOAL = 5;
-    // JDBC Timestamp의 Julian 달력 변환 구간 제외
-    private static final LocalDate MIN_DATE = LocalDate.of(1583, 1, 1);
+    // 동기화 요청 시각의 연도 범위 기준
+    private static final LocalDate MIN_DATE = LocalDate.of(1, 1, 1);
     private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final MissionProgressRepository repository;

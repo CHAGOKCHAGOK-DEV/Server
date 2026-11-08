@@ -1,7 +1,8 @@
 package com.chagokchagok.server.domain.mission.repository;
 
-import java.sql.Timestamp;
+import com.chagokchagok.server.global.common.jdbc.JdbcInstants;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,8 +15,8 @@ public class MissionProgressRepository {
     private final JdbcTemplate jdbc;
 
     public DailyResultCounts countResults(UUID installationId, Instant dayStart, Instant dayEnd) {
-        Timestamp start = Timestamp.from(dayStart);
-        Timestamp end = Timestamp.from(dayEnd);
+        OffsetDateTime start = JdbcInstants.bind(dayStart);
+        OffsetDateTime end = JdbcInstants.bind(dayEnd);
         // 결과 시작 시각이 Trip 시작 이후라는 동기화 검증 기준의 인덱스 범위 축소
         return jdbc.queryForObject("""
                 SELECT count(DISTINCT r.trip_id) AS trip_count,

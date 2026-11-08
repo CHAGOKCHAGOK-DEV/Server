@@ -6,10 +6,9 @@ import com.chagokchagok.server.domain.trip.dto.TripResultSummary;
 import com.chagokchagok.server.domain.trip.entity.MissionResultStatus;
 import com.chagokchagok.server.domain.trip.entity.TripEndReason;
 import com.chagokchagok.server.domain.trip.entity.TripStatus;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import com.chagokchagok.server.global.common.jdbc.JdbcInstants;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,7 +66,7 @@ public class TripHistoryRepository {
     private static final RowMapper<TripHistoryItem> TRIP = (rs, row) -> new TripHistoryItem(
             rs.getObject("id", UUID.class), rs.getString("mission_pack_code"), rs.getInt("mission_pack_version"),
             TripStatus.valueOf(rs.getString("status")), TripEndReason.valueOf(rs.getString("end_reason")),
-            instant(rs, "started_at"), instant(rs, "ended_at"), instant(rs, "created_at"),
+            JdbcInstants.read(rs, "started_at"), JdbcInstants.read(rs, "ended_at"), JdbcInstants.read(rs, "created_at"),
             new TripResultSummary(rs.getInt("mission_result_count"), rs.getInt("participated_count"),
                     rs.getInt("completed_count"), rs.getInt("correct_count")));
 
@@ -78,7 +77,7 @@ public class TripHistoryRepository {
     }
 
     public List<TripHistoryItem> findPageAfter(UUID installationId, Instant startedAt, UUID tripId, int limit) {
-        Timestamp position = Timestamp.from(startedAt);
+        OffsetDateTime position = JdbcInstants.bind(startedAt);
         return jdbc.query(NEXT_PAGE, TRIP, installationId, position, position, tripId, limit);
     }
 
@@ -98,10 +97,6 @@ public class TripHistoryRepository {
                 """, (rs, row) -> new TripMissionResultItem(rs.getObject("id", UUID.class),
                 rs.getString("mission_code"), MissionResultStatus.valueOf(rs.getString("status")),
                 rs.getBoolean("participated"), rs.getObject("is_correct", Boolean.class),
-                instant(rs, "started_at"), instant(rs, "ended_at")), installationId, tripId);
-    }
-
-    private static Instant instant(ResultSet rs, String column) throws SQLException {
-        return rs.getTimestamp(column).toInstant();
+                JdbcInstants.read(rs, "started_at"), JdbcInstants.read(rs, "ended_at")), installationId, tripId);
     }
 }

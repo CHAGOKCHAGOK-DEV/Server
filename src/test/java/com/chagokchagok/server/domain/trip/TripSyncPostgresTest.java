@@ -23,6 +23,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -105,7 +106,30 @@ class TripSyncPostgresTest {
         assertThat(retry).isEqualTo(original);
         assertThat(count("trips")).isEqualTo(1);
         assertThat(count("mission_results")).isEqualTo(2);
-        assertThat(jdbc.queryForObject("SELECT started_at FROM trips", java.sql.Timestamp.class).toInstant()).isEqualTo(START);
+        assertThat(jdbc.queryForObject("SELECT started_at FROM trips", OffsetDateTime.class).toInstant()).isEqualTo(START);
+    }
+
+    @Test
+    void storesPreGregorianInstantsExactlyAndReplaysIdentically() throws Exception {
+        // 기존 Timestamp 바인딩 기준 UTC에서는 Julian 1500-02-29, Asia/Seoul에서는 10일 이동 저장되는 시각
+        Instant early = Instant.parse("1500-03-10T15:32:08Z");
+        var request = new TripSyncRequest(UUID.randomUUID(), "DEFAULT", 1, TripStatus.COMPLETED,
+                TripEndReason.MANUAL_STOP, early, early.plusSeconds(600), List.of(new TripSyncRequest.Result(
+                UUID.randomUUID(), "V-01", MissionResultStatus.COMPLETED, true, true, early, early.plusSeconds(10))));
+        String original = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
+                .isEqualTo(original);
+        assertThat(utc("SELECT started_at FROM trips")).isEqualTo("1500-03-10T15:32:08.000000");
+        assertThat(utc("SELECT ended_at FROM trips")).isEqualTo("1500-03-10T15:42:08.000000");
+        assertThat(utc("SELECT started_at FROM mission_results")).isEqualTo("1500-03-10T15:32:08.000000");
+        assertThat(utc("SELECT ended_at FROM mission_results")).isEqualTo("1500-03-10T15:32:18.000000");
+    }
+
+    // JDBC 읽기 변환을 거치지 않는 PostgreSQL 계산 기준 저장값
+    private String utc(String column) {
+        return jdbc.queryForObject("""
+                SELECT to_char(v AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US') FROM (%s) q(v)
+                """.formatted(column), String.class);
     }
 
     @Test

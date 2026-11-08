@@ -73,6 +73,8 @@ Content-Type: application/json
 | 미션 상태 | COMPLETED, EXPIRED, CANCELLED |
 | 참여·정답 | participated 필수, correct는 null 허용, 미참여면 correct는 null |
 
+시각은 JDBC에서 `java.sql.Timestamp` 대신 UTC `OffsetDateTime`으로 저장·조회합니다. `Timestamp`는 1582년 이전 시각을 Julian 달력으로 변환하므로 PostgreSQL에 다른 날짜로 저장되거나 존재하지 않는 날짜로 거부될 수 있기 때문입니다. 새 저장 경로를 추가할 때도 `JdbcInstants`를 사용합니다.
+
 오프라인 중 이미 수행한 과거 기록을 받으므로 ARCHIVED 미션팩과 현재 비활성화된 미션도 허용합니다. DRAFT 미션팩은 거부합니다. 동일 미션 코드를 여러 번 수행할 때는 수행마다 별도 resultId를 사용합니다. 결과 상태별 참여 여부의 추가 제한과 채점·보상은 확정된 정책이 없어 추론하지 않습니다.
 
 ## 멱등성과 동시성
