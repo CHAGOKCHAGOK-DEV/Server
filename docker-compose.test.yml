@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: trip_sync_test
+      POSTGRES_USER: sync_test
+      POSTGRES_PASSWORD: ${PG_TEST_PASSWORD:?Set PG_TEST_PASSWORD for the test database}
+    ports:
+      - "127.0.0.1:0:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sync_test -d trip_sync_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
