@@ -45,4 +45,4 @@ Android는 두 값을 안전한 저장소에 보관하고 이후 요청에 `X-In
 
 ## 운영 조건
 
-운영 프로필은 설치 등록, 프로필, 주행·미션·동의 API 요청을 HTTPS에서만 받습니다. EC2의 Nginx는 공개 HTTP 요청을 HTTPS로 리디렉션하고, 443에서 TLS를 종료해 컨테이너의 `127.0.0.1:8080`으로 프록시합니다. 서버는 운영 프로필의 전달 헤더 처리로 원래 요청의 HTTPS 여부를 확인하며, HTTP 요청이 서버에 직접 도달하면 `INSTALLATION_403`으로 거부합니다. EC2의 443 프록시 블록에는 [기본 프록시 설정](../../deploy/nginx/chagokchagok.conf)의 전달 헤더 항목을 반영했습니다. 클라이언트가 보낸 `Forwarded`를 제거하고 `X-Forwarded-*`를 덮어써야 합니다.
+운영 프로필은 설치 등록, 프로필, 주행·미션·동의 API 요청을 HTTPS에서만 받습니다. EC2의 Nginx는 공개 HTTP 요청을 HTTPS로 리디렉션하고, 443에서 TLS를 종료해 컨테이너의 `127.0.0.1:8080`으로 프록시합니다. 서버는 운영 프로필의 전달 헤더 처리로 원래 요청의 HTTPS 여부를 확인하며, HTTP 요청이 서버에 직접 도달하면 `INSTALLATION_403`으로 거부합니다. EC2의 443 프록시 블록에는 [전달 헤더 보안 설정](../../deploy/nginx/installation-forwarded-headers.snippet)을 반영했습니다. 클라이언트가 보낸 `Forwarded`를 제거하고 `X-Forwarded-*`를 덮어써야 합니다.

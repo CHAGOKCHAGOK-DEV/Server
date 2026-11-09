@@ -16,7 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 public class InstallationHttpsFilter extends OncePerRequestFilter {
 
     private final RequestMatcher target;
-    private final ObjectMapper mapper;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

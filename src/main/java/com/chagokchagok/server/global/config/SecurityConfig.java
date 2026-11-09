@@ -22,7 +22,6 @@ import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class SecurityConfig {
@@ -30,8 +29,6 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
-    private final ObjectMapper objectMapper;
-
     @Value("${installation.require-https:false}")
     private boolean requireInstallationHttps;
 
@@ -43,7 +40,8 @@ public class SecurityConfig {
         "/api/v1/health"
     };
 
-    // 설치 전용 엔드포인트 추가 시 등록 필수. MVC와 같은 디코딩 경로 기준으로 매칭한다.
+    // 인코딩 경로 우회 방지를 위해 MVC와 같은 디코딩 경로 기준 매칭
+    // 설치 전용 엔드포인트 추가 시 등록 필수, {tripId}와 겹치는 sync는 패턴 제약 변경 대비 명시 유지
     private static final RequestMatcher INSTALLATION_ENDPOINTS = new OrRequestMatcher(
         PathPatternRequestMatcher.pathPattern("/api/v1/installations/me"),
         PathPatternRequestMatcher.pathPattern("/api/v1/copilot"),
@@ -68,19 +66,17 @@ public class SecurityConfig {
     public SecurityConfig(
         JwtAuthenticationFilter jwtAuthenticationFilter,
         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-        JwtAccessDeniedHandler jwtAccessDeniedHandler,
-        ObjectMapper objectMapper
+        JwtAccessDeniedHandler jwtAccessDeniedHandler
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
-        this.objectMapper = objectMapper;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, InstallationRepository installations) throws Exception {
         if (requireInstallationHttps) {
-            http.addFilterBefore(new InstallationHttpsFilter(INSTALLATION_TRANSPORT, objectMapper),
+            http.addFilterBefore(new InstallationHttpsFilter(INSTALLATION_TRANSPORT),
                     LogoutFilter.class);
         }
         return http
