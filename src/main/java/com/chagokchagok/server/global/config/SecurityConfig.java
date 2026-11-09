@@ -40,7 +40,10 @@ public class SecurityConfig {
         PathPatternRequestMatcher.pathPattern("/api/v1/trips/sync"),
         PathPatternRequestMatcher.pathPattern("/api/v1/trips"),
         PathPatternRequestMatcher.pathPattern("/api/v1/trips/{tripId}"),
-        PathPatternRequestMatcher.pathPattern("/api/v1/missions/daily-progress")
+        PathPatternRequestMatcher.pathPattern("/api/v1/missions/daily-progress"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/current"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/status"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/consents")
     );
 
     // 설치 필터 변경이나 순서 오류 시에도 설치 주체만 허용
