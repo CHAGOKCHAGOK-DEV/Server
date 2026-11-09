@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 public enum TripErrorCode implements BaseErrorCode {
     INVALID_TRIP(HttpStatus.BAD_REQUEST, "TRIP_400", "주행 상태, 시간 또는 미션 결과가 올바르지 않습니다."),
     INVALID_CONTENT(HttpStatus.BAD_REQUEST, "TRIP_400_1", "사용할 수 없는 미션팩 버전 또는 미션 코드입니다."),
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST, "TRIP_400_2", "주행 목록 커서가 올바르지 않습니다."),
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_404", "주행 기록을 찾을 수 없습니다."),
     SYNC_CONFLICT(HttpStatus.CONFLICT, "TRIP_409", "같은 식별자로 다른 주행 또는 미션 결과가 저장되어 있습니다.");
 

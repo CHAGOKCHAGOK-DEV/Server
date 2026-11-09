@@ -23,6 +23,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -86,8 +87,11 @@ class TripSyncPostgresTest {
         jdbc.execute("TRUNCATE agreement_histories, agreement_documents, mission_results, trips, missions, mission_packs, copilots, installations RESTART IDENTITY CASCADE");
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", INSTALLATION, hash(TOKEN));
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", OTHER_INSTALLATION, hash(OTHER_TOKEN));
-        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'PUBLISHED'), (2, 'DEFAULT', 2, 'ARCHIVED'), (3, 'DRAFT', 1, 'DRAFT')");
-        jdbc.update("INSERT INTO missions(id, mission_pack_id, code, trigger_type, config) VALUES (1, 1, 'V-01', 'WIPER_ON', '{}'::jsonb), (2, 2, 'V-01', 'WIPER_ON', '{}'::jsonb), (3, 2, 'V-02', 'WIPER_ON', '{}'::jsonb)");
+        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'DRAFT'), (2, 'DEFAULT', 2, 'DRAFT'), (3, 'DRAFT', 1, 'DRAFT')");
+        jdbc.update("INSERT INTO missions(id, mission_pack_id, code, trigger_type, config, enabled) VALUES (1, 1, 'V-01', 'WIPER_ON', '{}'::jsonb, true), (2, 2, 'V-01', 'WIPER_ON', '{}'::jsonb, false), (3, 2, 'V-02', 'WIPER_ON', '{}'::jsonb, true)");
+        jdbc.update("UPDATE mission_packs SET status='PUBLISHED', published_at=now() WHERE id=1");
+        jdbc.update("UPDATE mission_packs SET status='PUBLISHED', published_at=now() WHERE id=2");
+        jdbc.update("UPDATE mission_packs SET status='ARCHIVED' WHERE id=2");
     }
 
     @Test
@@ -105,7 +109,30 @@ class TripSyncPostgresTest {
         assertThat(retry).isEqualTo(original);
         assertThat(count("trips")).isEqualTo(1);
         assertThat(count("mission_results")).isEqualTo(2);
-        assertThat(jdbc.queryForObject("SELECT started_at FROM trips", java.sql.Timestamp.class).toInstant()).isEqualTo(START);
+        assertThat(jdbc.queryForObject("SELECT started_at FROM trips", OffsetDateTime.class).toInstant()).isEqualTo(START);
+    }
+
+    @Test
+    void storesPreGregorianInstantsExactlyAndReplaysIdentically() throws Exception {
+        // 기존 Timestamp 바인딩 기준 UTC에서는 Julian 1500-02-29, Asia/Seoul에서는 10일 이동 저장되는 시각
+        Instant early = Instant.parse("1500-03-10T15:32:08Z");
+        var request = new TripSyncRequest(UUID.randomUUID(), "DEFAULT", 1, TripStatus.COMPLETED,
+                TripEndReason.MANUAL_STOP, early, early.plusSeconds(600), List.of(new TripSyncRequest.Result(
+                UUID.randomUUID(), "V-01", MissionResultStatus.COMPLETED, true, true, early, early.plusSeconds(10))));
+        String original = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
+                .isEqualTo(original);
+        assertThat(utc("SELECT started_at FROM trips")).isEqualTo("1500-03-10T15:32:08.000000");
+        assertThat(utc("SELECT ended_at FROM trips")).isEqualTo("1500-03-10T15:42:08.000000");
+        assertThat(utc("SELECT started_at FROM mission_results")).isEqualTo("1500-03-10T15:32:08.000000");
+        assertThat(utc("SELECT ended_at FROM mission_results")).isEqualTo("1500-03-10T15:32:18.000000");
+    }
+
+    // JDBC 읽기 변환을 거치지 않는 PostgreSQL 계산 기준 저장값
+    private String utc(String column) {
+        return jdbc.queryForObject("""
+                SELECT to_char(v AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US') FROM (%s) q(v)
+                """.formatted(column), String.class);
     }
 
     @Test
@@ -208,7 +235,6 @@ class TripSyncPostgresTest {
         var request = request(UUID.randomUUID(), List.of(result(UUID.randomUUID(), "V-01", true)));
         String original = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         jdbc.update("UPDATE mission_packs SET status = 'ARCHIVED' WHERE id = 1");
-        jdbc.update("UPDATE missions SET enabled = false WHERE id = 1");
         String retry = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(retry).isEqualTo(original);
     }
@@ -231,7 +257,6 @@ class TripSyncPostgresTest {
 
     @Test
     void acceptsArchivedVersionDisabledMissionAndInterruptedTripForOfflineHistory() throws Exception {
-        jdbc.update("UPDATE missions SET enabled = false WHERE id = 2");
         send(new TripSyncRequest(UUID.randomUUID(), "DEFAULT", 2, TripStatus.INTERRUPTED, TripEndReason.APP_INTERRUPTED,
                 START, START.plusSeconds(600), List.of(result(UUID.randomUUID(), "V-01", true))))
                 .andExpect(status().isOk());

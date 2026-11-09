@@ -1,9 +1,8 @@
 package com.chagokchagok.server.domain.trip.repository;
 
-
 import com.chagokchagok.server.domain.trip.dto.TripSyncRequest;
 import com.chagokchagok.server.domain.trip.dto.TripSyncResponse;
-import java.sql.Timestamp;
+import com.chagokchagok.server.global.common.jdbc.JdbcInstants;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,7 +28,7 @@ public class TripSyncRepository {
                 FROM trips t WHERE t.id = ?
                 """, (rs, row) -> new StoredTrip(rs.getObject("installation_id", UUID.class),
                 rs.getString("payload_hash"), new TripSyncResponse(rs.getObject("id", UUID.class),
-                rs.getTimestamp("created_at").toInstant(), rs.getInt("result_count"))), tripId).stream().findFirst();
+                JdbcInstants.read(rs, "created_at"), rs.getInt("result_count"))), tripId).stream().findFirst();
     }
 
     public Optional<Long> findAvailablePack(String code, int version) {
@@ -50,7 +49,7 @@ public class TripSyncRepository {
                                    started_at, ended_at, payload_hash)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
                 """, request.tripId(), installationId, packId, request.status().name(), request.endReason().name(),
-                Timestamp.from(request.startedAt()), Timestamp.from(request.endedAt()), hash) == 1;
+                JdbcInstants.bind(request.startedAt()), JdbcInstants.bind(request.endedAt()), hash) == 1;
     }
 
     public boolean insertResult(UUID tripId, long missionId, TripSyncRequest.Result result) {
@@ -59,7 +58,7 @@ public class TripSyncRepository {
                                              is_correct, started_at, ended_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
                 """, result.resultId(), tripId, missionId, result.status().name(), result.participated(),
-                result.correct(), Timestamp.from(result.startedAt()), Timestamp.from(result.endedAt())) == 1;
+                result.correct(), JdbcInstants.bind(result.startedAt()), JdbcInstants.bind(result.endedAt())) == 1;
     }
 
     public record StoredTrip(UUID installationId, String payloadHash, TripSyncResponse response) {
