@@ -103,7 +103,11 @@ TZ=Asia/Seoul
 JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50
 ```
 
-배포 후 Swagger UI는 `http://<EC2_HOST>/swagger-ui.html`에서 확인할 수 있습니다.
+### HTTPS
+
+EC2에서는 Nginx가 80/443 포트를 받고, Docker 컨테이너는 `127.0.0.1:8080`에서만 접근할 수 있습니다. Nginx의 기본 HTTP 프록시 설정은 [deploy/nginx/chagokchagok.conf](deploy/nginx/chagokchagok.conf)에 있습니다. 인증서는 EC2에서 Certbot의 Nginx 플러그인으로 발급하고, HTTP 요청은 HTTPS로 리디렉션합니다.
+
+배포 후 헬스 체크는 `https://api.hyundai-little-copoilot.store/actuator/health`, Swagger UI는 `https://api.hyundai-little-copoilot.store/swagger-ui.html`에서 확인할 수 있습니다.
 
 ## 협업 규칙
 
