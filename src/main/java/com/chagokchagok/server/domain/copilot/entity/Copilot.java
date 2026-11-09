@@ -51,4 +51,10 @@ public class Copilot extends BaseTimeEntity {
         this.missionIntensity = MissionIntensity.NORMAL;
     }
 
+    public void update(String nickname, AgeGroup ageGroup, MissionIntensity missionIntensity) {
+        this.nickname = Objects.requireNonNull(nickname);
+        this.ageGroup = Objects.requireNonNull(ageGroup);
+        this.missionIntensity = Objects.requireNonNull(missionIntensity);
+    }
+
 }

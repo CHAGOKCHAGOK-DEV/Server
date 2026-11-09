@@ -3,9 +3,11 @@ package com.chagokchagok.server.global.config;
 import com.chagokchagok.server.domain.installation.repository.InstallationRepository;
 import com.chagokchagok.server.global.security.InstallationAuthenticationFilter;
 import com.chagokchagok.server.global.security.InstallationPrincipal;
+import com.chagokchagok.server.global.security.InstallationHttpsFilter;
 import com.chagokchagok.server.global.security.jwt.JwtAccessDeniedHandler;
 import com.chagokchagok.server.global.security.jwt.JwtAuthenticationEntryPoint;
 import com.chagokchagok.server.global.security.jwt.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -26,6 +29,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    @Value("${installation.require-https:false}")
+    private boolean requireInstallationHttps;
 
     private static final String[] PUBLIC_ENDPOINTS = {
         "/swagger-ui/**",
@@ -38,6 +43,8 @@ public class SecurityConfig {
     // 인코딩 경로 우회 방지를 위해 MVC와 같은 디코딩 경로 기준 매칭
     // 설치 전용 엔드포인트 추가 시 등록 필수, {tripId}와 겹치는 sync는 패턴 제약 변경 대비 명시 유지
     private static final RequestMatcher INSTALLATION_ENDPOINTS = new OrRequestMatcher(
+        PathPatternRequestMatcher.pathPattern("/api/v1/installations/me"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/copilot"),
         PathPatternRequestMatcher.pathPattern("/api/v1/trips/sync"),
         PathPatternRequestMatcher.pathPattern("/api/v1/trips"),
         PathPatternRequestMatcher.pathPattern("/api/v1/trips/{tripId}"),
@@ -45,6 +52,9 @@ public class SecurityConfig {
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/current"),
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/status"),
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/consents")
+    );
+    private static final RequestMatcher INSTALLATION_TRANSPORT = new OrRequestMatcher(
+        PathPatternRequestMatcher.pathPattern("/api/v1/installations"), INSTALLATION_ENDPOINTS
     );
 
     // 설치 필터 변경이나 순서 오류 시에도 설치 주체만 허용
@@ -65,6 +75,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, InstallationRepository installations) throws Exception {
+        if (requireInstallationHttps) {
+            http.addFilterBefore(new InstallationHttpsFilter(INSTALLATION_TRANSPORT),
+                    LogoutFilter.class);
+        }
         return http
             .csrf(csrf -> csrf.disable())
             .formLogin(formLogin -> formLogin.disable())
@@ -76,6 +90,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/installations").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/mission-packs/current").permitAll()
                 .requestMatchers(INSTALLATION_ENDPOINTS).access(INSTALLATION_ONLY)
                 .anyRequest().authenticated()
