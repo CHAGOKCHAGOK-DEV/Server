@@ -55,4 +55,19 @@ public class MissionPack extends BaseTimeEntity {
         this.status = MissionPackStatus.DRAFT;
     }
 
+    public void publish(Instant now) {
+        if (status != MissionPackStatus.DRAFT) {
+            throw new IllegalStateException("Only draft mission packs can be published");
+        }
+        status = MissionPackStatus.PUBLISHED;
+        publishedAt = Objects.requireNonNull(now);
+    }
+
+    public void archive() {
+        if (status != MissionPackStatus.PUBLISHED) {
+            throw new IllegalStateException("Only published mission packs can be archived");
+        }
+        status = MissionPackStatus.ARCHIVED;
+    }
+
 }
