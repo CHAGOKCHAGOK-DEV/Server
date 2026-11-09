@@ -39,6 +39,22 @@ jobs:
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${COMMIT_SHA}" >> "$GITHUB_ENV"
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build application JAR
+        run: |
+          chmod +x gradlew
+          ./gradlew clean bootJar --no-daemon
+          mkdir -p docker-dist
+          cp build/libs/*.jar docker-dist/app.jar
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -50,6 +66,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile.ci
           push: true
           tags: ${{ env.IMAGE }}
 
