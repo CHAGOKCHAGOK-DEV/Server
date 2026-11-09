@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
@@ -34,7 +35,13 @@ public class SecurityConfig {
     };
 
     // 인코딩 경로 우회 방지를 위해 MVC와 같은 디코딩 경로 기준 매칭
-    private static final RequestMatcher TRIP_SYNC = PathPatternRequestMatcher.pathPattern("/api/v1/trips/sync");
+    // 설치 전용 엔드포인트 추가 시 등록 필수
+    private static final RequestMatcher INSTALLATION_ENDPOINTS = new OrRequestMatcher(
+        PathPatternRequestMatcher.pathPattern("/api/v1/trips/sync"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/current"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/status"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/agreements/consents")
+    );
 
     // 설치 필터 변경이나 순서 오류 시에도 설치 주체만 허용
     static final AuthorizationManager<RequestAuthorizationContext> INSTALLATION_ONLY = (authentication, context) -> {
@@ -65,7 +72,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                .requestMatchers(TRIP_SYNC).access(INSTALLATION_ONLY)
+                .requestMatchers(INSTALLATION_ENDPOINTS).access(INSTALLATION_ONLY)
                 .anyRequest().authenticated()
             )
 
@@ -79,7 +86,7 @@ public class SecurityConfig {
                 UsernamePasswordAuthenticationFilter.class
             )
             .addFilterAfter(
-                new InstallationAuthenticationFilter(installations, jwtAuthenticationEntryPoint, TRIP_SYNC),
+                new InstallationAuthenticationFilter(installations, jwtAuthenticationEntryPoint, INSTALLATION_ENDPOINTS),
                 JwtAuthenticationFilter.class
             )
 
