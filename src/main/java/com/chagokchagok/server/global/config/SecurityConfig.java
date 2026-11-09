@@ -6,6 +6,7 @@ import com.chagokchagok.server.global.security.InstallationPrincipal;
 import com.chagokchagok.server.global.security.jwt.JwtAccessDeniedHandler;
 import com.chagokchagok.server.global.security.jwt.JwtAuthenticationEntryPoint;
 import com.chagokchagok.server.global.security.jwt.JwtAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -75,6 +76,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/mission-packs/current").permitAll()
                 .requestMatchers(INSTALLATION_ENDPOINTS).access(INSTALLATION_ONLY)
                 .anyRequest().authenticated()
             )

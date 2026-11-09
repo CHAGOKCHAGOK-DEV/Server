@@ -7,7 +7,7 @@ set -euo pipefail
 
 APP_NAME=chagokchagok-server
 ENV_FILE="$HOME/chagokchagok/.env"
-HEALTH_URL=http://localhost/actuator/health
+HEALTH_URL=http://127.0.0.1:8080/actuator/health
 HEALTH_RETRIES=40
 HEALTH_INTERVAL_SECONDS=3
 
@@ -21,7 +21,7 @@ run_container() {
     --name "$APP_NAME" \
     --restart unless-stopped \
     --env-file "$ENV_FILE" \
-    -p 80:8080 \
+    -p 127.0.0.1:8080:8080 \
     "$1"
 }
 

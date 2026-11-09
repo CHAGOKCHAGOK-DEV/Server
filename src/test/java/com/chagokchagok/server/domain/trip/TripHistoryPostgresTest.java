@@ -83,8 +83,9 @@ class TripHistoryPostgresTest {
         jdbc.execute("TRUNCATE agreement_histories, agreement_documents, mission_results, trips, missions, mission_packs, copilots, installations RESTART IDENTITY CASCADE");
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", INSTALLATION, hash(TOKEN));
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", OTHER_INSTALLATION, hash(OTHER_TOKEN));
-        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'PUBLISHED')");
+        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'DRAFT')");
         jdbc.update("INSERT INTO missions(id, mission_pack_id, code, trigger_type, config) VALUES (1, 1, 'V-01', 'WIPER_ON', '{}'::jsonb), (2, 1, 'V-02', 'WIPER_ON', '{}'::jsonb)");
+        jdbc.update("UPDATE mission_packs SET status='PUBLISHED', published_at=now() WHERE id=1");
         clock.set(BASE);
     }
 

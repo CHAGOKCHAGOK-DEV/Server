@@ -87,8 +87,11 @@ class TripSyncPostgresTest {
         jdbc.execute("TRUNCATE agreement_histories, agreement_documents, mission_results, trips, missions, mission_packs, copilots, installations RESTART IDENTITY CASCADE");
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", INSTALLATION, hash(TOKEN));
         jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", OTHER_INSTALLATION, hash(OTHER_TOKEN));
-        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'PUBLISHED'), (2, 'DEFAULT', 2, 'ARCHIVED'), (3, 'DRAFT', 1, 'DRAFT')");
-        jdbc.update("INSERT INTO missions(id, mission_pack_id, code, trigger_type, config) VALUES (1, 1, 'V-01', 'WIPER_ON', '{}'::jsonb), (2, 2, 'V-01', 'WIPER_ON', '{}'::jsonb), (3, 2, 'V-02', 'WIPER_ON', '{}'::jsonb)");
+        jdbc.update("INSERT INTO mission_packs(id, code, version, status) VALUES (1, 'DEFAULT', 1, 'DRAFT'), (2, 'DEFAULT', 2, 'DRAFT'), (3, 'DRAFT', 1, 'DRAFT')");
+        jdbc.update("INSERT INTO missions(id, mission_pack_id, code, trigger_type, config, enabled) VALUES (1, 1, 'V-01', 'WIPER_ON', '{}'::jsonb, true), (2, 2, 'V-01', 'WIPER_ON', '{}'::jsonb, false), (3, 2, 'V-02', 'WIPER_ON', '{}'::jsonb, true)");
+        jdbc.update("UPDATE mission_packs SET status='PUBLISHED', published_at=now() WHERE id=1");
+        jdbc.update("UPDATE mission_packs SET status='PUBLISHED', published_at=now() WHERE id=2");
+        jdbc.update("UPDATE mission_packs SET status='ARCHIVED' WHERE id=2");
     }
 
     @Test
@@ -232,7 +235,6 @@ class TripSyncPostgresTest {
         var request = request(UUID.randomUUID(), List.of(result(UUID.randomUUID(), "V-01", true)));
         String original = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         jdbc.update("UPDATE mission_packs SET status = 'ARCHIVED' WHERE id = 1");
-        jdbc.update("UPDATE missions SET enabled = false WHERE id = 1");
         String retry = send(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(retry).isEqualTo(original);
     }
@@ -255,7 +257,6 @@ class TripSyncPostgresTest {
 
     @Test
     void acceptsArchivedVersionDisabledMissionAndInterruptedTripForOfflineHistory() throws Exception {
-        jdbc.update("UPDATE missions SET enabled = false WHERE id = 2");
         send(new TripSyncRequest(UUID.randomUUID(), "DEFAULT", 2, TripStatus.INTERRUPTED, TripEndReason.APP_INTERRUPTED,
                 START, START.plusSeconds(600), List.of(result(UUID.randomUUID(), "V-01", true))))
                 .andExpect(status().isOk());

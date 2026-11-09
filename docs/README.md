@@ -2,6 +2,8 @@
 
 ## 핵심 도메인
 
+- [미션팩 조회 API와 스키마 v1](./api/mission-pack.md): 기본 콘텐츠, 호환 버전 조회, JSON 설정 및 Android 연동 계약
+
 - [주행·미션 결과 동기화 API](./api/trip-sync.md): 설치 인증, 요청·응답, 멱등성·동시성·롤백 및 PostgreSQL 테스트
 - [주행 이력·일일 미션 진행 조회 API](./api/trip-history.md): 커서 목록, 상세, Asia/Seoul 일일 집계와 접근 제어
 

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chagokchagok.dev/schema/mission-config-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["trigger", "completion", "execution", "ageContent"],
+  "properties": {
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": {"enum": ["TURN_SIGNAL_OFF", "WIPER_ON", "NAVI_NEXT_TURN", "NEAR_DESTINATION"]},
+        "lookbackMs": {"type": "integer", "minimum": 1},
+        "etaSecondsAtMost": {"type": "integer", "minimum": 1, "maximum": 3600}
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answerKind", "expectedAnswer", "maxRetries"],
+      "properties": {
+        "answerKind": {"enum": ["YES_NO", "LEFT_RIGHT", "FREE"]},
+        "expectedAnswer": {"enum": ["YES", "NAVI_DIRECTION", "ANY_SPOKEN"]},
+        "maxRetries": {"type": "integer", "minimum": 0, "maximum": 1}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["validity", "cooldownSecondsByIntensity", "holdWhen"],
+      "properties": {
+        "validity": {
+          "oneOf": [
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["mode", "durationMs"],
+              "properties": {
+                "mode": {"const": "TIME"},
+                "durationMs": {"type": "integer", "minimum": 1}
+              }
+            },
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["mode", "expireAtDistanceMeters"],
+              "properties": {
+                "mode": {"const": "NAVIGATION_DISTANCE"},
+                "expireAtDistanceMeters": {"type": "integer", "minimum": 1}
+              }
+            },
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["mode"],
+              "properties": {"mode": {"const": "ROUTE_ACTIVE"}}
+            }
+          ]
+        },
+        "cooldownSecondsByIntensity": {
+          "type": "object", "additionalProperties": false,
+          "required": ["LOW", "NORMAL", "HIGH"],
+          "properties": {
+            "LOW": {"type": "integer", "minimum": 0},
+            "NORMAL": {"type": "integer", "minimum": 0},
+            "HIGH": {"type": "integer", "minimum": 0}
+          }
+        },
+        "maxPerTrip": {"type": "integer", "minimum": 1},
+        "holdWhen": {
+          "type": "object", "additionalProperties": false,
+          "required": ["turnSignalOn", "naviSpeaking"],
+          "properties": {
+            "turnSignalOn": {"type": "boolean"},
+            "naviSpeaking": {"type": "boolean"},
+            "nextTurnWithinMeters": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "ageContent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["AGE_5_6", "AGE_7_8", "AGE_9_10"],
+      "properties": {
+        "AGE_5_6": {"$ref": "#/$defs/content"},
+        "AGE_7_8": {"$ref": "#/$defs/content"},
+        "AGE_9_10": {"$ref": "#/$defs/content"}
+      }
+    }
+  },
+  "$defs": {
+    "content": {
+      "type": "object", "additionalProperties": false,
+      "required": ["question", "correctMessage", "wrongMessage"],
+      "properties": {
+        "question": {"type": "string", "minLength": 1, "maxLength": 300},
+        "correctMessage": {"type": "string", "minLength": 1, "maxLength": 300},
+        "wrongMessage": {"type": "string", "minLength": 1, "maxLength": 300}
+      }
+    }
+  }
+}

@@ -36,7 +36,7 @@
 | 미션 콘텐츠 | MissionPack 버전과 Mission JSONB로 관리 | 확정 |
 | 오프라인 기록 | Trip과 MissionResult에 Android 생성 UUID 사용 | 확정 |
 | 동기화 충돌 | 동일 UUID의 payload 정규화 및 hash 비교 | 동기화 API 구현 |
-| 콘텐츠 불변성 | 발행된 MissionPack과 Mission의 수정 차단 | 후속 구현 |
+| 콘텐츠 불변성 | 발행된 MissionPack과 Mission의 수정 차단 | DB 트리거 구현 |
 | 동의 문서 불변성 | 발행된 AgreementDocument의 동의 조건 변경·삭제를 DB 트리거로 차단 | V2 구현 |
 | 비정상 종료 복구 | Android 동기화 계약에서 종료 시각과 사유의 복구 기준 확정 | 정책 확정 후 구현 |
 | 음성 저장 | MissionVoiceResponse 별도 엔티티로 확장 | 정책 확정 후 구현 |
@@ -111,11 +111,11 @@ MissionPack의 `version`은 미션 콘텐츠 개정 번호이고 `schema_version
 
 MissionPack 상태는 `DRAFT`, `PUBLISHED`, `ARCHIVED`입니다. 발행된 미션팩을 직접 수정하지 않고 변경이 필요하면 새로운 콘텐츠 버전을 만드는 것을 원칙으로 합니다.
 
-현재 DB는 허용 상태값만 검증하며 발행 이후 UPDATE 자체를 막지는 않습니다. PUBLISHED 또는 ARCHIVED 상태의 MissionPack과 소속 Mission을 변경하지 못하게 하는 규칙은 콘텐츠 관리 서비스에서 구현해야 합니다.
+DB 트리거는 발행 또는 보관된 MissionPack의 내용 수정·삭제와 소속 Mission의 추가·수정·삭제를 막습니다. PUBLISHED에서 ARCHIVED로의 상태 전환만 허용합니다. 발행 전에는 타임스탬프와 활성 미션이 필요하며, 서비스는 활성 미션의 JSON 스키마와 코드별 규칙을 검증합니다.
 
 ### Mission 설정은 JSONB로 관리
 
-미션의 발동 세부 조건, 완료 조건, 실행 간격, 유효 시간, Trip당 최대 횟수, 연령대별 질문과 정답 판정 방식은 `missions.config` JSONB에 저장합니다. DB는 최상위 값이 JSON 객체인지 검증합니다.
+미션의 발동 세부 조건, 완료 조건, 실행 간격, 유효 시간, Trip당 최대 횟수, 연령대별 질문과 정답 판정 방식은 `missions.config` JSONB에 저장합니다. DB는 최상위 값이 JSON 객체인지 검증합니다. 스키마 v1의 상세 계약은 [미션팩 조회 API 문서](../api/mission-pack.md)에 있습니다.
 
 관계형 컬럼으로 분리하지 않은 이유는 연령대별 질문과 미션 종류별 조건 구조가 서로 다르고 초기 스키마가 아직 진화할 가능성이 크기 때문입니다. 반대로 JSONB 내부 값은 일반 FK나 CHECK 제약으로 충분히 보호하기 어려우므로 저장 전 애플리케이션의 `schema_version`별 검증이 필요합니다.
 
@@ -276,9 +276,7 @@ SHA-256 해시 컬럼은 PostgreSQL `CHAR(64)`를 사용합니다. Hibernate 7�
 - 진행 중 Trip 서버 저장
 - 음성 파일과 STT 원문 저장
 - 설치 토큰 만료, 회전 및 이력
-- MissionPack 발행 이후 불변성 서비스 로직
 - 비정상 종료 Trip의 종료 시각과 사유 복구 기준
-- MissionPack 발행 시 최소 미션 수 정책
 - 동의 철회 이벤트와 현재 동의 상태의 순서 정책
 - 실제 동의 대상 확정과 법정대리인 확인 절차
 
