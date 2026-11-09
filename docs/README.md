@@ -3,6 +3,7 @@
 ## 핵심 도메인
 
 - [주행·미션 결과 동기화 API](./api/trip-sync.md): 설치 인증, 요청·응답, 멱등성·동시성·롤백 및 PostgreSQL 테스트
+- [주행 이력·일일 미션 진행 조회 API](./api/trip-history.md): 커서 목록, 상세, Asia/Seoul 일일 집계와 접근 제어
 
 - [동의 API](./api/agreement.md): 현재 문서·동의 상태 조회, 동의 이벤트 기록, 멱등성과 발행 문서 불변성
 - [동의 도메인과 화면 계약](./architecture/agreement-domain-design.md): 동의 문서·이력 명세, 서버 저장 전환과 후속 정책

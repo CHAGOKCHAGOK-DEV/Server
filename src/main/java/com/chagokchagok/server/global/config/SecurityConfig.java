@@ -35,9 +35,12 @@ public class SecurityConfig {
     };
 
     // 인코딩 경로 우회 방지를 위해 MVC와 같은 디코딩 경로 기준 매칭
-    // 설치 전용 엔드포인트 추가 시 등록 필수
+    // 설치 전용 엔드포인트 추가 시 등록 필수, {tripId}와 겹치는 sync는 패턴 제약 변경 대비 명시 유지
     private static final RequestMatcher INSTALLATION_ENDPOINTS = new OrRequestMatcher(
         PathPatternRequestMatcher.pathPattern("/api/v1/trips/sync"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/trips"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/trips/{tripId}"),
+        PathPatternRequestMatcher.pathPattern("/api/v1/missions/daily-progress"),
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/current"),
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/status"),
         PathPatternRequestMatcher.pathPattern("/api/v1/agreements/consents")
