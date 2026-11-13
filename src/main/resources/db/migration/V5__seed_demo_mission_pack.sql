@@ -8,8 +8,14 @@ ALTER TABLE missions ADD CONSTRAINT ck_missions_trigger_type CHECK (trigger_type
 DO $$
 DECLARE
     pack_id BIGINT;
+    existing_schema_version INTEGER;
 BEGIN
-    IF EXISTS (SELECT 1 FROM mission_packs WHERE code = 'DEFAULT' AND version = 2) THEN
+    SELECT schema_version INTO existing_schema_version
+    FROM mission_packs WHERE code = 'DEFAULT' AND version = 2;
+    IF FOUND THEN
+        IF existing_schema_version <> 2 THEN
+            RAISE EXCEPTION 'DEFAULT version 2 has schema_version %, expected 2', existing_schema_version;
+        END IF;
         RETURN;
     END IF;
 

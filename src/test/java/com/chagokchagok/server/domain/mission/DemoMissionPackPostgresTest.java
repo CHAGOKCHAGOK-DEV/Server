@@ -1,6 +1,7 @@
 package com.chagokchagok.server.domain.mission;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -80,5 +81,22 @@ class DemoMissionPackPostgresTest {
         jdbc.execute(sql);
         assertThat(jdbc.queryForObject("SELECT id FROM mission_packs WHERE code='DEFAULT' AND version=2", Long.class))
                 .isEqualTo(packId);
+    }
+
+    @Test
+    void rejectsExistingDefaultVersionTwoWithDifferentSchemaVersion() throws Exception {
+        jdbc.execute("TRUNCATE agreement_histories, agreement_documents, mission_results, trips, missions, mission_packs, copilots, installations RESTART IDENTITY CASCADE");
+        String originalSeed = new String(new ClassPathResource("db/migration/V3__seed_default_mission_pack.sql")
+                .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        jdbc.execute(originalSeed);
+        jdbc.update("INSERT INTO mission_packs(code, version, schema_version, status) VALUES ('DEFAULT', 2, 1, 'DRAFT')");
+
+        String demoSeed = new String(new ClassPathResource("db/migration/V5__seed_demo_mission_pack.sql")
+                .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> jdbc.execute(demoSeed))
+                .hasStackTraceContaining("DEFAULT version 2 has schema_version 1, expected 2");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM missions WHERE mission_pack_id = "
+                + "(SELECT id FROM mission_packs WHERE code='DEFAULT' AND version=2)", Integer.class))
+                .isZero();
     }
 }
