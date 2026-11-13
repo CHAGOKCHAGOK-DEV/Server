@@ -597,7 +597,7 @@ class AgreementPostgresTest {
 
     private void seedProductionDocuments() throws Exception {
         jdbc.execute("TRUNCATE agreement_histories, agreement_documents RESTART IDENTITY CASCADE");
-        jdbc.execute(new ClassPathResource("db/migration/V6__seed_production_agreement_documents.sql")
+        jdbc.execute(new ClassPathResource("db/migration/V7__seed_production_agreement_documents.sql")
                 .getContentAsString(StandardCharsets.UTF_8));
     }
 

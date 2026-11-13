@@ -41,7 +41,7 @@ class CoreDomainMigrationTest {
 
     @Test
     void productionAgreementMigrationContainsFinalDocumentsWithoutChangingTheirContent() throws IOException {
-        String migration = new ClassPathResource("db/migration/V6__seed_production_agreement_documents.sql")
+        String migration = new ClassPathResource("db/migration/V7__seed_production_agreement_documents.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
 
         assertThat(migration)
@@ -56,5 +56,18 @@ class CoreDomainMigrationTest {
                 .contains("$child$, TRUE, 'PUBLISHED'")
                 .contains("TIMESTAMPTZ '2026-11-15 00:00:00+09'")
                 .doesNotContain("ON CONFLICT");
+    }
+
+    @Test
+    void ageGroupMigrationUpdatesProfilesAndMissionContent() throws IOException {
+        String migration = new ClassPathResource("db/migration/V5__rename_age_group_9_plus.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(migration)
+                .contains("SET age_group = 'AGE_9_PLUS'")
+                .contains("WHERE age_group = 'AGE_9_10'")
+                .contains("age_group IN ('AGE_5_6', 'AGE_7_8', 'AGE_9_PLUS')")
+                .contains("config #- '{ageContent,AGE_9_10}'")
+                .contains("'{ageContent,AGE_9_PLUS}'");
     }
 }
