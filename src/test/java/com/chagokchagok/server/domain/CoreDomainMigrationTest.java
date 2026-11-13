@@ -38,4 +38,17 @@ class CoreDomainMigrationTest {
                 .contains("CONSTRAINT ck_trips_period CHECK (ended_at >= started_at)")
                 .contains("CONSTRAINT ck_mission_results_period CHECK (ended_at >= started_at)");
     }
+
+    @Test
+    void ageGroupMigrationUpdatesProfilesAndMissionContent() throws IOException {
+        String migration = new ClassPathResource("db/migration/V5__rename_age_group_9_plus.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(migration)
+                .contains("SET age_group = 'AGE_9_PLUS'")
+                .contains("WHERE age_group = 'AGE_9_10'")
+                .contains("age_group IN ('AGE_5_6', 'AGE_7_8', 'AGE_9_PLUS')")
+                .contains("config #- '{ageContent,AGE_9_10}'")
+                .contains("'{ageContent,AGE_9_PLUS}'");
+    }
 }

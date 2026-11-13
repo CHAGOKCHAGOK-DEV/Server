@@ -56,8 +56,10 @@ class InstallationCopilotApiTest {
                 .andExpect(status().isNotFound());
         mvc.perform(put("/api/v1/copilot").header("X-Installation-Id", first.id())
                 .header("Authorization", "Bearer " + first.token()).contentType(MediaType.APPLICATION_JSON)
-                .content(profile("새이름", "AGE_9_10", "HIGH")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.missionIntensity").value("HIGH"));
+                .content(profile("새이름", "AGE_9_PLUS", "HIGH")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ageGroup").value("AGE_9_PLUS"))
+                .andExpect(jsonPath("$.data.missionIntensity").value("HIGH"));
         mvc.perform(get("/api/v1/copilot").header("X-Installation-Id", first.id())
                 .header("Authorization", "Bearer " + first.token()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.nickname").value("새이름"));
@@ -80,6 +82,10 @@ class InstallationCopilotApiTest {
                 .header("Authorization", "Bearer " + credential.token()).contentType(MediaType.APPLICATION_JSON)
                 .content(profile("bad name", "AGE_7_8", "NORMAL")))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("COMMON_400"));
+        mvc.perform(post("/api/v1/copilot").header("X-Installation-Id", credential.id())
+                .header("Authorization", "Bearer " + credential.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(profile("부기장", "AGE_9_10", "NORMAL")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("COMMON_400_1"));
     }
 
     private Credential register() throws Exception {
