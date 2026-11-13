@@ -43,7 +43,7 @@ Flyway V3가 기본 팩 `DEFAULT` 버전 1과 네 미션을 발행합니다. 이
 
 ## 시연용 DEFAULT v2
 
-Flyway V5는 기존 `DEFAULT` v1과 네 미션을 수정하지 않고 `DEFAULT` v2(`schemaVersion: 2`)에 10개를 추가합니다. `GET /api/v1/mission-packs/current?supportedSchemaVersion=2`로 조회합니다. 기본 요청과 스키마 v1 클라이언트는 계속 v1을 받습니다. v2 데이터는 [노션 미션 정리표](https://app.notion.com/p/2-4157e597ac2b80beb472ea2d57968a2d)의 추천 10칸에서 `T-07 창밖 찾기`를 빼고 `N-02 도착까지`를 넣은 것입니다. 추천표의 `N-09 도착! + T-06 안전운전 리포트`는 시연용 미션 하나(`N-09_T-06`)로 합쳤습니다.
+Flyway V6는 기존 `DEFAULT` v1과 네 미션을 수정하지 않고 `DEFAULT` v2(`schemaVersion: 2`)에 10개를 추가합니다. `GET /api/v1/mission-packs/current?supportedSchemaVersion=2`로 조회합니다. 기본 요청과 스키마 v1 클라이언트는 계속 v1을 받습니다. v2 데이터는 [노션 미션 정리표](https://app.notion.com/p/2-4157e597ac2b80beb472ea2d57968a2d)의 추천 10칸에서 `T-07 창밖 찾기`를 빼고 `N-02 도착까지`를 넣은 것입니다. 추천표의 `N-09 도착! + T-06 안전운전 리포트`는 시연용 미션 하나(`N-09_T-06`)로 합쳤습니다.
 
 | 코드 | 미션 | 이벤트 |
 | --- | --- | --- |

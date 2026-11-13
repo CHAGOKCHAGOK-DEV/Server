@@ -44,7 +44,7 @@ class DemoMissionPackPostgresTest {
     @BeforeEach
     void seedBothVersions() throws Exception {
         jdbc.execute("TRUNCATE agreement_histories, agreement_documents, mission_results, trips, missions, mission_packs, copilots, installations RESTART IDENTITY CASCADE");
-        for (String name : new String[]{"V3__seed_default_mission_pack.sql", "V5__seed_demo_mission_pack.sql"}) {
+        for (String name : new String[]{"V3__seed_default_mission_pack.sql", "V5__rename_age_group_9_plus.sql", "V6__seed_demo_mission_pack.sql"}) {
             String sql = new String(new ClassPathResource("db/migration/" + name)
                     .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             jdbc.execute(sql);
@@ -62,7 +62,9 @@ class DemoMissionPackPostgresTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(2))
                 .andExpect(jsonPath("$.data.schemaVersion").value(2))
-                .andExpect(jsonPath("$.data.missions.length()").value(10));
+                .andExpect(jsonPath("$.data.missions.length()").value(10))
+                .andExpect(jsonPath("$.data.missions[0].config.ageContent.AGE_9_PLUS.question").isNotEmpty())
+                .andExpect(jsonPath("$.data.missions[0].config.ageContent.AGE_9_10").doesNotExist());
 
         assertThat(jdbc.queryForList("SELECT code FROM missions WHERE mission_pack_id = "
                 + "(SELECT id FROM mission_packs WHERE code='DEFAULT' AND version=2)", String.class))
@@ -76,7 +78,7 @@ class DemoMissionPackPostgresTest {
     @Test
     void rerunningSeedDoesNotChangePublishedDemoPack() throws Exception {
         Long packId = jdbc.queryForObject("SELECT id FROM mission_packs WHERE code='DEFAULT' AND version=2", Long.class);
-        String sql = new String(new ClassPathResource("db/migration/V5__seed_demo_mission_pack.sql")
+        String sql = new String(new ClassPathResource("db/migration/V6__seed_demo_mission_pack.sql")
                 .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         jdbc.execute(sql);
         assertThat(jdbc.queryForObject("SELECT id FROM mission_packs WHERE code='DEFAULT' AND version=2", Long.class))
@@ -89,9 +91,12 @@ class DemoMissionPackPostgresTest {
         String originalSeed = new String(new ClassPathResource("db/migration/V3__seed_default_mission_pack.sql")
                 .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         jdbc.execute(originalSeed);
+        String ageGroupMigration = new String(new ClassPathResource("db/migration/V5__rename_age_group_9_plus.sql")
+                .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        jdbc.execute(ageGroupMigration);
         jdbc.update("INSERT INTO mission_packs(code, version, schema_version, status) VALUES ('DEFAULT', 2, 1, 'DRAFT')");
 
-        String demoSeed = new String(new ClassPathResource("db/migration/V5__seed_demo_mission_pack.sql")
+        String demoSeed = new String(new ClassPathResource("db/migration/V6__seed_demo_mission_pack.sql")
                 .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         assertThatThrownBy(() -> jdbc.execute(demoSeed))
                 .hasStackTraceContaining("DEFAULT version 2 has schema_version 1, expected 2");
