@@ -12,7 +12,7 @@
       "additionalProperties": false,
       "required": ["event"],
       "properties": {
-        "event": {"enum": ["TURN_SIGNAL_OFF", "WIPER_ON", "NAVI_NEXT_TURN", "NAVI_TRIP_INFO", "TRIP_STARTED", "MISSION_CORRECT", "TRIP_PAUSED", "DESTINATION_ARRIVED"]},
+        "event": {"enum": ["TURN_SIGNAL_OFF", "WIPER_ON", "NAVI_NEXT_TURN", "NAVI_TRIP_INFO", "TRIP_STARTED", "MISSION_CORRECT", "TRIP_PAUSED", "NO_EVENT_TIMEOUT", "DESTINATION_ARRIVED"]},
         "minOnMs": {"type": "integer", "minimum": 1},
         "directionRequired": {"type": "boolean"},
         "minDistanceMeters": {"type": "integer", "minimum": 0},
@@ -21,6 +21,8 @@
         "sourceMissionCode": {"type": "string", "minLength": 1},
         "maxPerDay": {"type": "integer", "minimum": 1},
         "intervalMinutes": {"type": "integer", "minimum": 1},
+        "noEventMinutes": {"type": "integer", "minimum": 1},
+        "straightRoadRequired": {"type": "boolean"},
         "onDemandPhrase": {"type": "string", "minLength": 1},
         "recognitionFailureCount": {"type": "integer", "minimum": 1},
         "pauseCommand": {"type": "string", "minLength": 1}

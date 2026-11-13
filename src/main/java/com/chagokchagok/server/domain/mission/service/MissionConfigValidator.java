@@ -76,6 +76,7 @@ public class MissionConfigValidator {
             case "N-02" -> "NAVI_TRIP_INFO";
             case "T-01" -> "TRIP_STARTED";
             case "T-05" -> "MISSION_CORRECT";
+            case "T-07" -> "NO_EVENT_TIMEOUT";
             case "T-08" -> "TRIP_PAUSED";
             case "N-09_T-06" -> "DESTINATION_ARRIVED";
             default -> throw new IllegalArgumentException("Unknown v2 mission code: " + mission.getCode());

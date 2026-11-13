@@ -10,5 +10,6 @@ public enum TriggerType {
     TRIP_STARTED,
     MISSION_CORRECT,
     TRIP_PAUSED,
+    NO_EVENT_TIMEOUT,
     DESTINATION_ARRIVED
 }
