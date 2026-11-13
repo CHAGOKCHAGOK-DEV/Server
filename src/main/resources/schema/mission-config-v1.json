@@ -78,11 +78,11 @@
     },
     "ageContent": {
       "type": "object", "additionalProperties": false,
-      "required": ["AGE_5_6", "AGE_7_8", "AGE_9_10"],
+      "required": ["AGE_5_6", "AGE_7_8", "AGE_9_PLUS"],
       "properties": {
         "AGE_5_6": {"$ref": "#/$defs/content"},
         "AGE_7_8": {"$ref": "#/$defs/content"},
-        "AGE_9_10": {"$ref": "#/$defs/content"}
+        "AGE_9_PLUS": {"$ref": "#/$defs/content"}
       }
     }
   },

@@ -25,7 +25,7 @@
         "ageContent": {
           "AGE_5_6": {"question": "...", "correctMessage": "...", "wrongMessage": "..."},
           "AGE_7_8": {"question": "...", "correctMessage": "...", "wrongMessage": "..."},
-          "AGE_9_10": {"question": "...", "correctMessage": "...", "wrongMessage": "..."}
+          "AGE_9_PLUS": {"question": "...", "correctMessage": "...", "wrongMessage": "..."}
         }
       }
     }
@@ -35,7 +35,7 @@
 
 실제 응답에는 `isSuccess`, 최상위 `code`, `message`도 있습니다. 위 JSON은 `data`만 보여줍니다. 배포된 팩이 없으면 404 `MISSION_PACK_404`, 발행된 팩은 있지만 지원 버전 이하가 없으면 406 `MISSION_PACK_406`을 반환합니다. `supportedSchemaVersion`이 1 미만이거나 `code`가 비어 있으면 400입니다.
 
-스키마 v1 원본은 [`mission-config-v1.json`](../../src/main/resources/schema/mission-config-v1.json)입니다. `trigger`는 차량·내비 이벤트와 BLINK의 30초 회고 구간, `completion`은 답변 종류와 정답 기준, `execution`은 유효 기간·강도별 간격·보류 조건·주행당 최대 횟수, `ageContent`는 연령별 음성 문구입니다. v1은 Android에 있는 BLINK, WIPER, NEXT_TURN, NEAR_DEST 코드만 허용합니다. LOW/NORMAL/HIGH는 Android의 RELAXED/NORMAL/ACTIVE와 각각 대응합니다. NEXT_TURN은 다음 회전까지 300m에 도달하면 폐기하고, NEAR_DEST는 남은 시간 300초 이하일 때만 발동하며 한 주행에서 한 번만 사용합니다. 남은 거리 기준은 Android에서 검증 전이라 v1에 넣지 않았습니다.
+스키마 v1 원본은 [`mission-config-v1.json`](../../src/main/resources/schema/mission-config-v1.json)입니다. `trigger`는 차량·내비 이벤트와 BLINK의 30초 회고 구간, `completion`은 답변 종류와 정답 기준, `execution`은 유효 기간·강도별 간격·보류 조건·주행당 최대 횟수, `ageContent`는 연령별 음성 문구입니다. 신규 콘텐츠는 `AGE_5_6`, `AGE_7_8`, `AGE_9_PLUS` 키를 모두 포함해야 하며, `AGE_9_PLUS`는 9세 이상용 콘텐츠입니다. v1은 Android에 있는 BLINK, WIPER, NEXT_TURN, NEAR_DEST 코드만 허용합니다. LOW/NORMAL/HIGH는 Android의 RELAXED/NORMAL/ACTIVE와 각각 대응합니다. NEXT_TURN은 다음 회전까지 300m에 도달하면 폐기하고, NEAR_DEST는 남은 시간 300초 이하일 때만 발동하며 한 주행에서 한 번만 사용합니다. 남은 거리 기준은 Android에서 검증 전이라 v1에 넣지 않았습니다.
 
 Flyway V3가 기본 팩 `DEFAULT` 버전 1과 네 미션을 발행합니다. 이미 같은 코드·버전이 있으면 내용을 덮어쓰지 않습니다. 발행 서비스는 활성 미션이 한 개 이상인지, 각 설정이 JSON Schema와 코드별 의미 규칙에 맞는지 검사합니다. Flyway V4는 발행된 콘텐츠의 DB 수정을 막고, 변경이 필요하면 새 `version`을 만들도록 합니다. 과거 주행 동기화는 당시 사용한 보관 버전을 계속 참조할 수 있습니다.
 

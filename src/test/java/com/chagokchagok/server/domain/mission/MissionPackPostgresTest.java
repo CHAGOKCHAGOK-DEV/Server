@@ -59,6 +59,9 @@ class MissionPackPostgresTest {
         String seed = new String(new ClassPathResource("db/migration/V3__seed_default_mission_pack.sql")
                 .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         jdbc.execute(seed);
+        String ageGroupMigration = new String(new ClassPathResource("db/migration/V5__rename_age_group_9_plus.sql")
+                .getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        jdbc.execute(ageGroupMigration);
     }
 
     @Test
@@ -73,6 +76,8 @@ class MissionPackPostgresTest {
                 .andExpect(jsonPath("$.data.missions.length()").value(4))
                 .andExpect(jsonPath("$.data.missions[0].code").value("BLINK"))
                 .andExpect(jsonPath("$.data.missions[0].config.ageContent.AGE_5_6.question").isNotEmpty())
+                .andExpect(jsonPath("$.data.missions[0].config.ageContent.AGE_9_PLUS.question").isNotEmpty())
+                .andExpect(jsonPath("$.data.missions[0].config.ageContent.AGE_9_10").doesNotExist())
                 .andExpect(jsonPath("$.data.missions[0].config.execution.cooldownSecondsByIntensity.NORMAL").value(180));
     }
 
@@ -143,7 +148,7 @@ class MissionPackPostgresTest {
         String json = jdbc.queryForObject("SELECT config::text FROM missions WHERE mission_pack_id=? AND code='BLINK'", String.class, pack.getId());
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode missingAge = (ObjectNode) mapper.readTree(json);
-        ((ObjectNode) missingAge.get("ageContent")).remove("AGE_9_10");
+        ((ObjectNode) missingAge.get("ageContent")).remove("AGE_9_PLUS");
         assertThatThrownBy(() -> validator.validate(new Mission(pack, "BLINK", TriggerType.TURN_SIGNAL_OFF, missingAge)))
                 .isInstanceOf(IllegalArgumentException.class);
 
