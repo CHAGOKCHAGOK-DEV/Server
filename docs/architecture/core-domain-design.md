@@ -95,7 +95,7 @@ Installation UUID는 식별자일 뿐 인증 수단이 아닙니다. 실제 요�
 
 - `AGE_5_6`
 - `AGE_7_8`
-- `AGE_9_10`
+- `AGE_9_PLUS`
 
 미션 강도는 `LOW`, `NORMAL`, `HIGH`를 사용하며 기본값은 `NORMAL`입니다. 강도별 실제 실행 간격과 안전 조건 우선순위는 Android 및 미션 실행 정책에서 정의해야 합니다.
 

@@ -1,6 +1,7 @@
 package com.chagokchagok.server.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.chagokchagok.server.domain.copilot.repository.CopilotRepository;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -93,5 +96,27 @@ class InstallationCopilotPostgresTest {
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("COPILOT_409"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM copilots WHERE installation_id = ?", Integer.class, id))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void migratesLegacyAgeGroupAndRestoresDatabaseConstraint() throws Exception {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO installations(id, token_hash) VALUES (?, ?)", id, "a".repeat(64));
+        jdbc.execute("ALTER TABLE copilots DROP CONSTRAINT ck_copilots_age_group");
+        jdbc.update("INSERT INTO copilots(installation_id, nickname, age_group) VALUES (?, 'copilot', 'AGE_9_10')", id);
+
+        String migration = new ClassPathResource("db/migration/V5__rename_age_group_9_plus.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+        jdbc.execute(migration);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT age_group FROM copilots WHERE installation_id = ?", String.class, id))
+                .isEqualTo("AGE_9_PLUS");
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE copilots SET age_group = 'AGE_9_10' WHERE installation_id = ?", id))
+                .hasMessageContaining("ck_copilots_age_group");
+        assertThat(jdbc.queryForObject(
+                "SELECT tgenabled FROM pg_trigger WHERE tgname = 'trg_protect_mission_content'", String.class))
+                .isEqualTo("O");
     }
 }

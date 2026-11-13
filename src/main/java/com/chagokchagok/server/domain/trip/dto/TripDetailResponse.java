@@ -2,10 +2,12 @@ package com.chagokchagok.server.domain.trip.dto;
 
 import com.chagokchagok.server.domain.trip.entity.TripEndReason;
 import com.chagokchagok.server.domain.trip.entity.TripStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Schema(name = "TripDetailResponse", description = "주행 이력 상세 응답")
 public record TripDetailResponse(
         UUID tripId,
         String missionPackCode,
