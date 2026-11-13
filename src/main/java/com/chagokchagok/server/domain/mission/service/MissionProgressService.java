@@ -1,5 +1,6 @@
 package com.chagokchagok.server.domain.mission.service;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.mission.dto.DailyMissionProgressResponse;
 import com.chagokchagok.server.domain.mission.repository.MissionProgressRepository;
 import com.chagokchagok.server.global.exception.ErrorCode;
@@ -26,9 +27,11 @@ public class MissionProgressService {
 
     private final MissionProgressRepository repository;
     private final Clock clock;
+    private final AgreementConsentGuard agreementConsentGuard;
 
     @Transactional(readOnly = true)
     public DailyMissionProgressResponse daily(UUID installationId, LocalDate requested) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         LocalDate date = requested == null ? LocalDate.ofInstant(clock.instant(), ZONE) : requested;
         if (date.isBefore(MIN_DATE) || date.isAfter(MAX_DATE)) {
             throw new GeneralException(ErrorCode.INVALID_INPUT_VALUE);

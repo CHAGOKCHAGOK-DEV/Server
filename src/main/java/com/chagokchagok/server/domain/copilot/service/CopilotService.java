@@ -1,5 +1,6 @@
 package com.chagokchagok.server.domain.copilot.service;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.copilot.dto.CopilotRequest;
 import com.chagokchagok.server.domain.copilot.dto.CopilotResponse;
 import com.chagokchagok.server.domain.copilot.entity.Copilot;
@@ -22,9 +23,11 @@ public class CopilotService {
     private final CopilotRepository copilots;
     private final InstallationRepository installations;
     private final EntityManager entityManager;
+    private final AgreementConsentGuard agreementConsentGuard;
 
     @Transactional
     public CopilotResponse create(UUID installationId, CopilotRequest request) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         if (copilots.existsById(installationId)) {
             throw new GeneralException(CopilotErrorCode.ALREADY_EXISTS);
         }
@@ -58,12 +61,14 @@ public class CopilotService {
 
     @Transactional(readOnly = true)
     public CopilotResponse get(UUID installationId) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         return CopilotResponse.from(copilots.findById(installationId)
                 .orElseThrow(() -> new GeneralException(CopilotErrorCode.NOT_FOUND)));
     }
 
     @Transactional
     public CopilotResponse update(UUID installationId, CopilotRequest request) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         Copilot copilot = copilots.findById(installationId)
                 .orElseThrow(() -> new GeneralException(CopilotErrorCode.NOT_FOUND));
         copilot.update(request.nickname(), request.ageGroup(), request.missionIntensity());

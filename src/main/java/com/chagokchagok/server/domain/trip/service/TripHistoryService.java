@@ -1,5 +1,6 @@
 package com.chagokchagok.server.domain.trip.service;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.trip.dto.TripDetailResponse;
 import com.chagokchagok.server.domain.trip.dto.TripHistoryItem;
 import com.chagokchagok.server.domain.trip.dto.TripHistoryPageResponse;
@@ -17,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class TripHistoryService {
 
     private final TripHistoryRepository repository;
+    private final AgreementConsentGuard agreementConsentGuard;
 
     @Transactional(readOnly = true)
     public TripHistoryPageResponse list(UUID installationId, String cursor, int size) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         List<TripHistoryItem> rows;
         if (cursor == null) {
             rows = repository.findFirstPage(installationId, size + 1);
@@ -37,6 +40,7 @@ public class TripHistoryService {
 
     @Transactional(readOnly = true)
     public TripDetailResponse detail(UUID installationId, UUID tripId) {
+        agreementConsentGuard.requireCurrentConsent(installationId);
         TripHistoryItem trip = repository.findTrip(installationId, tripId)
                 .orElseThrow(() -> new GeneralException(TripErrorCode.TRIP_NOT_FOUND));
         return TripDetailResponse.of(trip, repository.findResults(installationId, tripId));

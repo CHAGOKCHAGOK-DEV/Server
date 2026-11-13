@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.trip.dto.TripSyncRequest;
 import com.chagokchagok.server.domain.trip.entity.MissionResultStatus;
 import com.chagokchagok.server.domain.trip.entity.TripEndReason;
@@ -43,6 +44,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -81,6 +83,7 @@ class TripSyncPostgresTest {
     @Autowired private JwtProvider jwtProvider;
     @Autowired private TripSyncService service;
     @MockitoSpyBean private TripSyncRepository syncRepository;
+    @MockitoBean private AgreementConsentGuard agreementConsentGuard;
 
     @BeforeEach
     void seed() throws Exception {
