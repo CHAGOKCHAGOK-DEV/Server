@@ -38,4 +38,23 @@ class CoreDomainMigrationTest {
                 .contains("CONSTRAINT ck_trips_period CHECK (ended_at >= started_at)")
                 .contains("CONSTRAINT ck_mission_results_period CHECK (ended_at >= started_at)");
     }
+
+    @Test
+    void productionAgreementMigrationContainsFinalDocumentsWithoutChangingTheirContent() throws IOException {
+        String migration = new ClassPathResource("db/migration/V6__seed_production_agreement_documents.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(migration)
+                .contains("('TERMS_OF_SERVICE', 1, '꼬마 부기장 서비스 이용약관'")
+                .contains("('PRIVACY_POLICY', 1, '꼬마 부기장 개인정보 처리방침'")
+                .contains("('CHILD_PRIVACY_COLLECTION', 1, '꼬마 부기장 아동 개인정보 수집·이용 및 법정대리인 동의서'")
+                .contains("$terms$# 꼬마 부기장 서비스 이용약관")
+                .contains("$terms$, TRUE, 'PUBLISHED'")
+                .contains("$privacy$# 꼬마 부기장 개인정보 처리방침")
+                .contains("$privacy$, FALSE, 'PUBLISHED'")
+                .contains("$child$# 꼬마 부기장 아동 개인정보 수집·이용 및 법정대리인 동의서")
+                .contains("$child$, TRUE, 'PUBLISHED'")
+                .contains("TIMESTAMPTZ '2026-11-15 00:00:00+09'")
+                .doesNotContain("ON CONFLICT");
+    }
 }
