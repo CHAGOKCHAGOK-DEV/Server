@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.copilot.dto.CopilotRequest;
 import com.chagokchagok.server.domain.copilot.entity.AgeGroup;
 import com.chagokchagok.server.domain.copilot.entity.MissionIntensity;
@@ -53,12 +54,13 @@ class CopilotServiceTest {
         var copilots = mock(CopilotRepository.class);
         var installations = mock(InstallationRepository.class);
         var manager = mock(EntityManager.class);
+        var agreementConsentGuard = mock(AgreementConsentGuard.class);
         when(installations.findById(org.mockito.ArgumentMatchers.any(UUID.class)))
                 .thenAnswer(invocation -> {
                     UUID id = invocation.getArgument(0);
                     return Optional.of(new Installation(id, "token-hash"));
                 });
         doThrow(failure).when(manager).flush();
-        return new CopilotService(copilots, installations, manager);
+        return new CopilotService(copilots, installations, manager, agreementConsentGuard);
     }
 }

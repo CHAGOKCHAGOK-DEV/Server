@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.trip.service.TripHistoryCursor;
 import com.chagokchagok.server.global.security.jwt.JwtProvider;
 import com.jayway.jsonpath.JsonPath;
@@ -33,6 +34,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -77,6 +79,7 @@ class TripHistoryPostgresTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private JwtProvider jwtProvider;
     @Autowired private MutableClock clock;
+    @MockitoBean private AgreementConsentGuard agreementConsentGuard;
 
     @BeforeEach
     void seed() throws Exception {

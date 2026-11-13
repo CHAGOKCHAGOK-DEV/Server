@@ -23,6 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/copilot")
 @SecurityRequirement(name = "Installation Token")
+@io.swagger.v3.oas.annotations.responses.ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403",
+                description = "필수 동의 누락은 CONSENT_REQUIRED, 개정 문서 재동의는 CONSENT_OUTDATED"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500",
+                description = "필수 동의 문서 미설정은 REQUIRED_AGREEMENT_NOT_CONFIGURED")
+})
 public class CopilotController {
 
     private final CopilotService service;

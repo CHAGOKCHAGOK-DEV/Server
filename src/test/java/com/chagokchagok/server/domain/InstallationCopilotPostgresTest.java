@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.copilot.repository.CopilotRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -48,6 +50,7 @@ class InstallationCopilotPostgresTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @MockitoSpyBean CopilotRepository copilots;
+    @MockitoBean AgreementConsentGuard agreementConsentGuard;
 
     @BeforeEach
     void clean() {

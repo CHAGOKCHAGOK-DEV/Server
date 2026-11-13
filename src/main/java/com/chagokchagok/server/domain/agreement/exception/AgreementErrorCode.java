@@ -9,7 +9,11 @@ public enum AgreementErrorCode implements BaseErrorCode {
     INVALID_CONSENT(HttpStatus.BAD_REQUEST, "AGREEMENT_400", "동의 행위, 발생 시각 또는 이벤트 구성이 올바르지 않습니다."),
     INVALID_DOCUMENT(HttpStatus.BAD_REQUEST, "AGREEMENT_400_1", "동의할 수 없는 문서 코드 또는 버전입니다."),
     CONSENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AGREEMENT_404", "동의 이력을 찾을 수 없습니다."),
-    CONSENT_CONFLICT(HttpStatus.CONFLICT, "AGREEMENT_409", "같은 이벤트 식별자로 다른 동의 이력이 저장되어 있습니다.");
+    CONSENT_CONFLICT(HttpStatus.CONFLICT, "AGREEMENT_409", "같은 이벤트 식별자로 다른 동의 이력이 저장되어 있습니다."),
+    CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "CONSENT_REQUIRED", "필수 보호자 동의가 필요합니다."),
+    CONSENT_OUTDATED(HttpStatus.FORBIDDEN, "CONSENT_OUTDATED", "개정된 필수 문서에 다시 동의해야 합니다."),
+    REQUIRED_AGREEMENT_NOT_CONFIGURED(HttpStatus.INTERNAL_SERVER_ERROR, "REQUIRED_AGREEMENT_NOT_CONFIGURED",
+            "필수 동의 문서가 설정되지 않았습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

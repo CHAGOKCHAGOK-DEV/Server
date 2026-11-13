@@ -1,5 +1,6 @@
 package com.chagokchagok.server.domain.trip.service;
 
+import com.chagokchagok.server.domain.agreement.service.AgreementConsentGuard;
 import com.chagokchagok.server.domain.trip.dto.TripSyncRequest;
 import com.chagokchagok.server.domain.trip.dto.TripSyncResponse;
 import com.chagokchagok.server.domain.trip.exception.TripErrorCode;
@@ -24,12 +25,14 @@ public class TripSyncService {
 
     private final TripSyncRepository repository;
     private final TripSyncPayload payload;
+    private final AgreementConsentGuard agreementConsentGuard;
 
     @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 30)
     public TripSyncResponse sync(UUID installationId, TripSyncRequest request) {
         if (!repository.lockActiveInstallation(installationId)) {
             throw new GeneralException(ErrorCode.UNAUTHORIZED);
         }
+        agreementConsentGuard.requireCurrentConsent(installationId);
         payload.validate(request);
         String hash = payload.hash(request);
         var existing = repository.findTrip(request.tripId());

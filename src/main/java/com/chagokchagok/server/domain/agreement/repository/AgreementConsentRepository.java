@@ -41,6 +41,32 @@ public class AgreementConsentRepository {
                 """, (rs, row) -> new AcceptedDocument(rs.getLong("id"), rs.getString("code")), installationId);
     }
 
+    public List<RequiredConsent> findCurrentRequiredDocuments(UUID installationId, Instant now) {
+        return jdbc.query("""
+                WITH current_documents AS (
+                    SELECT DISTINCT ON (code) id, code, version, is_required
+                    FROM agreement_documents
+                    WHERE status = 'PUBLISHED' AND effective_at <= ?
+                    ORDER BY code, version DESC
+                )
+                SELECT d.code, d.version,
+                    EXISTS (
+                        SELECT 1 FROM agreement_histories h
+                        WHERE h.installation_id = ? AND h.agreement_document_id = d.id AND h.action = 'ACCEPTED'
+                    ) AS accepted_current,
+                    EXISTS (
+                        SELECT 1 FROM agreement_histories h
+                        JOIN agreement_documents accepted_document ON accepted_document.id = h.agreement_document_id
+                        WHERE h.installation_id = ? AND accepted_document.code = d.code AND h.action = 'ACCEPTED'
+                    ) AS accepted_previously
+                FROM current_documents d
+                WHERE d.is_required = TRUE
+                ORDER BY d.code
+                """, (rs, row) -> new RequiredConsent(rs.getString("code"), rs.getInt("version"),
+                rs.getBoolean("accepted_current"), rs.getBoolean("accepted_previously")),
+                Timestamp.from(now), installationId, installationId);
+    }
+
     public Optional<ConsentDocument> findConsentableDocument(String code, int version, Instant now) {
         return jdbc.query("""
                 SELECT id, effective_at FROM agreement_documents
@@ -74,6 +100,9 @@ public class AgreementConsentRepository {
     }
 
     public record AcceptedDocument(long id, String code) {
+    }
+
+    public record RequiredConsent(String code, int version, boolean acceptedCurrent, boolean acceptedPreviously) {
     }
 
     public record ConsentDocument(long id, Instant effectiveAt) {
