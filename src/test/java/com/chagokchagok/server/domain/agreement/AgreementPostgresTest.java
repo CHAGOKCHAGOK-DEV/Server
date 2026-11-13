@@ -46,6 +46,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -78,6 +79,7 @@ class AgreementPostgresTest {
     private static final Instant EFFECTIVE = Instant.parse("2026-11-01T00:00:00Z");
     private static final Instant SCHEDULED = Instant.parse("2026-12-01T00:00:00Z");
     private static final Instant ACCEPTED_AT = Instant.parse("2026-11-08T00:00:00.123456Z");
+    private static final Instant PRODUCTION_EFFECTIVE = Instant.parse("2026-11-14T15:00:00Z");
     private static final Duration SKEW = Duration.ofMinutes(5);
 
     @DynamicPropertySource
@@ -146,6 +148,64 @@ class AgreementPostgresTest {
         authenticated(get(CURRENT)).andExpect(jsonPath("$.data.documents[1].version").value(2));
         clock.set(SCHEDULED);
         authenticated(get(CURRENT)).andExpect(jsonPath("$.data.documents[1].version").value(3));
+    }
+
+    @Test
+    void productionDocumentsSupportCurrentStatusAndRequiredConsentFlow() throws Exception {
+        seedProductionDocuments();
+        authenticated(get(CURRENT)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.documents.length()").value(0));
+        authenticated(get(STATUS)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentRequired").value(false));
+
+        clock.set(PRODUCTION_EFFECTIVE);
+
+        authenticated(get(CURRENT)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.documents.length()").value(3))
+                .andExpect(jsonPath("$.data.documents[0].code").value("CHILD_PRIVACY_COLLECTION"))
+                .andExpect(jsonPath("$.data.documents[0].required").value(true))
+                .andExpect(jsonPath("$.data.documents[1].code").value("PRIVACY_POLICY"))
+                .andExpect(jsonPath("$.data.documents[1].required").value(false))
+                .andExpect(jsonPath("$.data.documents[2].code").value("TERMS_OF_SERVICE"))
+                .andExpect(jsonPath("$.data.documents[2].required").value(true));
+        authenticated(get(STATUS)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentRequired").value(true))
+                .andExpect(jsonPath("$.data.documents.length()").value(3));
+
+        send(List.of(
+                new Event(LOW, "CHILD_PRIVACY_COLLECTION", 1, AgreementAction.ACCEPTED, PRODUCTION_EFFECTIVE),
+                new Event(HIGH, "TERMS_OF_SERVICE", 1, AgreementAction.ACCEPTED, PRODUCTION_EFFECTIVE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consents.length()").value(2));
+        authenticated(get(STATUS)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentRequired").value(false))
+                .andExpect(jsonPath("$.data.documents[1].code").value("PRIVACY_POLICY"))
+                .andExpect(jsonPath("$.data.documents[1].state").value("NOT_ACCEPTED"));
+        assertThat(count()).isEqualTo(2);
+
+        assertThat(documentContent("TERMS_OF_SERVICE"))
+                .startsWith("# 꼬마 부기장 서비스 이용약관")
+                .contains("## 제1장 총칙", "## 부칙")
+                .endsWith("- 운영 목적: 현대자동차그룹 차량용 앱 개발 공모전 출품 및 시연");
+        assertThat(documentContent("PRIVACY_POLICY"))
+                .startsWith("# 꼬마 부기장 개인정보 처리방침")
+                .contains("## 제1조 개인정보의 처리 목적", "## 제13조 처리방침의 변경")
+                .endsWith("본 개인정보 처리방침은 2026년 11월 15일부터 적용합니다.");
+        assertThat(documentContent("CHILD_PRIVACY_COLLECTION"))
+                .startsWith("# 꼬마 부기장 아동 개인정보 수집·이용 및 법정대리인 동의서")
+                .contains("## 제1조 개인정보 수집·이용 목적", "## 동의 의사 확인")
+                .endsWith("법정대리인 동의가 필요한 경우에는 관계 법령에 따른 별도의 확인 절차를 거쳐 동의 여부를 확인합니다.");
+    }
+
+    @Test
+    void agreementApisReturnEmptyStateWhenNoDocumentsExist() throws Exception {
+        jdbc.execute("TRUNCATE agreement_histories, agreement_documents RESTART IDENTITY CASCADE");
+
+        authenticated(get(CURRENT)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.documents.length()").value(0));
+        authenticated(get(STATUS)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentRequired").value(false))
+                .andExpect(jsonPath("$.data.documents.length()").value(0));
     }
 
     @Test
@@ -533,6 +593,18 @@ class AgreementPostgresTest {
 
     private long count() {
         return jdbc.queryForObject("SELECT count(*) FROM agreement_histories", Long.class);
+    }
+
+    private void seedProductionDocuments() throws Exception {
+        jdbc.execute("TRUNCATE agreement_histories, agreement_documents RESTART IDENTITY CASCADE");
+        jdbc.execute(new ClassPathResource("db/migration/V7__seed_production_agreement_documents.sql")
+                .getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    private String documentContent(String code) {
+        return jdbc.queryForObject(
+                "SELECT content FROM agreement_documents WHERE code = ?", String.class, code)
+                .replace("\r\n", "\n").stripTrailing();
     }
 
     private String hash(String token) throws Exception {
