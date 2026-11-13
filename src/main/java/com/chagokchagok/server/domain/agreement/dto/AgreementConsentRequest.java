@@ -1,6 +1,7 @@
 package com.chagokchagok.server.domain.agreement.dto;
 
 import com.chagokchagok.server.domain.agreement.entity.AgreementAction;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,9 +11,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Schema(name = "AgreementConsentRequest", description = "약관 동의 이력 저장 요청")
 public record AgreementConsentRequest(
         @NotNull @Size(min = 1, max = 20) List<@NotNull @Valid Event> events
 ) {
+    @Schema(name = "AgreementConsentEvent", description = "약관 동의 이벤트")
     public record Event(
             @NotNull UUID eventId,
             @NotBlank @Size(max = 50) String code,
