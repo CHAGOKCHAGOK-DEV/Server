@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chagokchagok.dev/schema/mission-config-v2.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "sourceIds", "trigger", "execution", "ageContent"],
+  "properties": {
+    "title": {"type": "string", "minLength": 1},
+    "sourceIds": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[VNT]-[0-9]{2}$"}},
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": {"enum": ["TURN_SIGNAL_OFF", "WIPER_ON", "NAVI_NEXT_TURN", "NAVI_TRIP_INFO", "TRIP_STARTED", "MISSION_CORRECT", "TRIP_PAUSED", "DESTINATION_ARRIVED"]},
+        "minOnMs": {"type": "integer", "minimum": 1},
+        "directionRequired": {"type": "boolean"},
+        "minDistanceMeters": {"type": "integer", "minimum": 0},
+        "maxDistanceMeters": {"type": "integer", "minimum": 1},
+        "minSpeedKph": {"type": "integer", "minimum": 0},
+        "sourceMissionCode": {"type": "string", "minLength": 1},
+        "maxPerDay": {"type": "integer", "minimum": 1},
+        "intervalMinutes": {"type": "integer", "minimum": 1},
+        "onDemandPhrase": {"type": "string", "minLength": 1},
+        "recognitionFailureCount": {"type": "integer", "minimum": 1},
+        "pauseCommand": {"type": "string", "minLength": 1}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["validity", "cooldownSecondsByIntensity", "holdWhen"],
+      "properties": {
+        "validity": {
+          "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["mode", "durationMs"], "properties": {"mode": {"const": "TIME"}, "durationMs": {"type": "integer", "minimum": 1}}},
+            {"type": "object", "additionalProperties": false, "required": ["mode", "expireAtDistanceMeters"], "properties": {"mode": {"const": "NAVIGATION_DISTANCE"}, "expireAtDistanceMeters": {"type": "integer", "minimum": 1}}},
+            {"type": "object", "additionalProperties": false, "required": ["mode"], "properties": {"mode": {"const": "ROUTE_ACTIVE"}}}
+          ]
+        },
+        "cooldownSecondsByIntensity": {
+          "type": "object", "additionalProperties": false,
+          "required": ["LOW", "NORMAL", "HIGH"],
+          "properties": {
+            "LOW": {"type": "integer", "minimum": 0},
+            "NORMAL": {"type": "integer", "minimum": 0},
+            "HIGH": {"type": "integer", "minimum": 0}
+          }
+        },
+        "maxPerTrip": {"type": "integer", "minimum": 1},
+        "holdWhen": {
+          "type": "object", "additionalProperties": false,
+          "required": ["turnSignalOn", "naviSpeaking"],
+          "properties": {
+            "turnSignalOn": {"type": "boolean"},
+            "naviSpeaking": {"type": "boolean"},
+            "nextTurnWithinMeters": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "ageContent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["AGE_5_6", "AGE_7_8", "AGE_9_10"],
+      "properties": {
+        "AGE_5_6": {"$ref": "#/$defs/content"},
+        "AGE_7_8": {"$ref": "#/$defs/content"},
+        "AGE_9_10": {"$ref": "#/$defs/content"}
+      }
+    }
+  },
+  "$defs": {
+    "content": {
+      "type": "object", "additionalProperties": false,
+      "required": ["question", "answerKind", "expectedAnswer", "correctMessage", "wrongMessage"],
+      "properties": {
+        "question": {"type": "string", "minLength": 1, "maxLength": 300},
+        "answerKind": {"enum": ["YES_NO", "LEFT_RIGHT", "CHOICE", "FREE", "NONE"]},
+        "expectedAnswer": {"type": "string", "minLength": 1},
+        "correctMessage": {"type": "string", "maxLength": 300},
+        "wrongMessage": {"type": "string", "maxLength": 300}
+      }
+    }
+  }
+}
