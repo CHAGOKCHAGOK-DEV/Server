@@ -16,7 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class MissionPackService {
 
-    private static final int SUPPORTED_SCHEMA_VERSION = 1;
+    private static final int SUPPORTED_SCHEMA_VERSION = 2;
 
     private final MissionPackRepository packs;
     private final MissionRepository missions;
@@ -52,7 +52,7 @@ public class MissionPackService {
     @Transactional
     public void publish(long packId) {
         var pack = packs.findById(packId).orElseThrow(() -> new GeneralException(MissionPackErrorCode.NOT_FOUND));
-        if (pack.getSchemaVersion() != SUPPORTED_SCHEMA_VERSION) {
+        if (pack.getSchemaVersion() < 1 || pack.getSchemaVersion() > SUPPORTED_SCHEMA_VERSION) {
             throw new IllegalArgumentException("Unsupported mission schema version: " + pack.getSchemaVersion());
         }
         var content = missions.findByMissionPackIdAndEnabledTrueOrderByCodeAsc(packId);
