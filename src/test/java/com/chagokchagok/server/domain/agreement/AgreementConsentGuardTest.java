@@ -37,6 +37,16 @@ class AgreementConsentGuardTest {
     }
 
     @Test
+    void ignoresPrivacyPolicyEvenWhenItIsMarkedRequiredAndHasNoConsent() {
+        when(repository.findCurrentRequiredDocuments(INSTALLATION, NOW)).thenReturn(List.of(
+                new RequiredConsent("CHILD_PRIVACY_COLLECTION", 1, true, true),
+                new RequiredConsent("PRIVACY_POLICY", 1, false, false),
+                new RequiredConsent("TERMS_OF_SERVICE", 1, true, true)));
+
+        assertThatCode(() -> guard.requireCurrentConsent(INSTALLATION)).doesNotThrowAnyException();
+    }
+
+    @Test
     void rejectsWhenARequiredDocumentHasNoConsentHistory() {
         when(repository.findCurrentRequiredDocuments(INSTALLATION, NOW)).thenReturn(List.of(
                 new RequiredConsent("CHILD_PRIVACY_COLLECTION", 1, true, true),

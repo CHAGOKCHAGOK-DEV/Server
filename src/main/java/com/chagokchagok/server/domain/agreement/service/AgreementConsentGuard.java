@@ -32,6 +32,9 @@ public class AgreementConsentGuard {
         }
 
         for (RequiredConsent document : documents) {
+            if (!REQUIRED_DOCUMENT_CODES.contains(document.code())) {
+                continue;
+            }
             if (!document.acceptedCurrent()) {
                 AgreementErrorCode errorCode = document.acceptedPreviously()
                         ? AgreementErrorCode.CONSENT_OUTDATED
