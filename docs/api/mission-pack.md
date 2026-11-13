@@ -43,7 +43,7 @@ Flyway V3가 기본 팩 `DEFAULT` 버전 1과 네 미션을 발행합니다. 이
 
 ## 시연용 DEFAULT v2
 
-Flyway V6는 기존 `DEFAULT` v1과 네 미션을 수정하지 않고 `DEFAULT` v2(`schemaVersion: 2`)에 10개를 추가합니다. `GET /api/v1/mission-packs/current?supportedSchemaVersion=2`로 조회합니다. 기본 요청과 스키마 v1 클라이언트는 계속 v1을 받습니다. v2 데이터는 [노션 미션 정리표](https://app.notion.com/p/2-4157e597ac2b80beb472ea2d57968a2d)의 추천 10칸에서 `T-07 창밖 찾기`를 빼고 `N-02 도착까지`를 넣은 것입니다. 추천표의 `N-09 도착! + T-06 안전운전 리포트`는 시연용 미션 하나(`N-09_T-06`)로 합쳤습니다.
+Flyway V6는 기존 `DEFAULT` v1과 네 미션을 수정하지 않고 `DEFAULT` v2(`schemaVersion: 2`)에 10개를 추가했습니다. 당시 추천 10칸에서 `T-07 창밖 찾기`를 빼고 `N-02 도착까지`를 넣었으나, 이후 추천 10개가 확정되어 아래 v3에서 정정했습니다. v2 행은 과거 버전으로 보존됩니다. 추천표의 `N-09 도착! + T-06 안전운전 리포트`는 시연용 미션 하나(`N-09_T-06`)로 합쳤습니다.
 
 | 코드 | 미션 | 이벤트 |
 | --- | --- | --- |
@@ -57,6 +57,25 @@ Flyway V6는 기존 `DEFAULT` v1과 네 미션을 수정하지 않고 `DEFAULT` 
 | T-05 | 길 건너기 | MISSION_CORRECT |
 | T-08 | 쉬어가기 | TRIP_PAUSED |
 | N-09_T-06 | 도착! 안전운전 리포트 | DESTINATION_ARRIVED |
+
+## 확정 시연용 DEFAULT v3
+
+Flyway V8은 발행된 v2를 변경하지 않고 새 콘텐츠 버전 `DEFAULT` v3(`schemaVersion: 2`)을 발행합니다. [노션의 확정 추천 10개](https://app.notion.com/p/2-4157e597ac2b80beb472ea2d57968a2d)에 맞춰 `N-02 도착까지`를 제외하고 `T-07 창밖 찾기`를 포함합니다. `GET /api/v1/mission-packs/current?supportedSchemaVersion=2`는 v3의 10개를 반환하며, 기본 요청과 스키마 v1 클라이언트는 계속 v1의 네 미션을 받습니다.
+
+| 코드 | 미션 | 이벤트 |
+| --- | --- | --- |
+| V-01 | 깜빡이 소리 | TURN_SIGNAL_OFF |
+| V-02 | 깜빡이 배우기 | TURN_SIGNAL_OFF |
+| V-03 | 깜빡이 방향 | TURN_SIGNAL_OFF |
+| V-04 | 비 오는 날 | WIPER_ON |
+| N-01 | 다음 회전 | NAVI_NEXT_TURN |
+| T-01 | 부기장 수칙 | TRIP_STARTED |
+| T-05 | 길 건너기 | MISSION_CORRECT |
+| T-07 | 창밖 찾기 | NO_EVENT_TIMEOUT |
+| T-08 | 쉬어가기 | TRIP_PAUSED |
+| N-09_T-06 | 도착! 안전운전 리포트 | DESTINATION_ARRIVED |
+
+`T-07`은 앱 내부에서 다른 이벤트 없이 20분이 지나고 직진 대기 중일 때 사용하는 `NO_EVENT_TIMEOUT` 이벤트입니다. 5~6세는 빨간 차, 7~8세는 노란 차를 찾고 “찾았다”라고 말합니다. 9세 이상은 트럭 찾기에 참여하며 숫자를 세어 정답을 판정하지 않습니다. Android가 이 신규 이벤트와 v2 미션팩을 처리하도록 연결해야 실제 주행에서 실행됩니다.
 
 v2 스키마는 [`mission-config-v2.json`](../../src/main/resources/schema/mission-config-v2.json)입니다. `sourceIds`는 노션 원본 ID, `ageContent`는 연령별 질문·답변 방식·정답·피드백입니다. `NONE`은 음성 안내만 하고 답변을 기다리지 않습니다. `{remainingMinutes}`와 `{correctCount}`는 클라이언트가 실제 주행 값으로 바꾸는 템플릿 변수입니다. 숫자 음성 판정은 시연에서 제외해, 숫자 질문은 바로 아래 연령대의 안내나 질문으로 대체했습니다.
 
