@@ -14,6 +14,7 @@ public class MissionConfigValidator {
 
     private final Schema schemaV1;
     private final Schema schemaV2;
+    private final Schema schemaV3;
 
     public MissionConfigValidator() {
         var registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
@@ -22,6 +23,8 @@ public class MissionConfigValidator {
         schemaV1.initializeValidators();
         schemaV2 = registry.getSchema(SchemaLocation.of("classpath:schema/mission-config-v2.json"));
         schemaV2.initializeValidators();
+        schemaV3 = registry.getSchema(SchemaLocation.of("classpath:schema/mission-config-v3.json"));
+        schemaV3.initializeValidators();
     }
 
     public void validate(Mission mission) {
@@ -30,6 +33,7 @@ public class MissionConfigValidator {
         Schema schema = switch (schemaVersion) {
             case 1 -> schemaV1;
             case 2 -> schemaV2;
+            case 3 -> schemaV3;
             default -> throw new IllegalArgumentException("Unsupported mission schema version: " + schemaVersion);
         };
         var errors = schema.validate(config.toString(), InputFormat.JSON);
@@ -37,6 +41,10 @@ public class MissionConfigValidator {
             throw new IllegalArgumentException("Invalid mission config for " + mission.getCode() + ": " + errors.getFirst());
         }
 
+        if (schemaVersion == 3) {
+            validateV3(mission);
+            return;
+        }
         if (schemaVersion == 2) {
             validateV2(mission);
             return;
@@ -64,6 +72,35 @@ public class MissionConfigValidator {
         };
         if (!valid || !mission.getTriggerType().name().equals(trigger)) {
             throw new IllegalArgumentException("Mission code, trigger, completion and validity disagree: " + code);
+        }
+    }
+
+    private void validateV3(Mission mission) {
+        JsonNode config = mission.getConfig();
+        String expectedEvent = switch (mission.getCode()) {
+            case "BLINK" -> "TURN_SIGNAL_OFF";
+            case "BLINK_LEARN" -> "MISSION_COMPLETED";
+            case "WIPER" -> "WIPER_ON";
+            case "RAIN_STOP" -> "WIPER_OFF";
+            case "NEXT_TURN" -> "NAVI_NEXT_TURN";
+            case "SPEED_GUESS" -> "SPEED_STABLE";
+            case "SIGNAL_WAIT", "WAIT_BET" -> "VEHICLE_STOPPED";
+            case "DEPART" -> "TRIP_STARTED";
+            case "BLINK_MEMORY" -> "TURN_SIGNAL_SUMMARY";
+            case "SPEED_CHANGE" -> "SPEED_CHANGED";
+            case "NEAR_DEST" -> "NEAR_DESTINATION";
+            case "TODAY_REPORT" -> "TRIP_ENDED";
+            default -> throw new IllegalArgumentException("Unknown v3 mission code: " + mission.getCode());
+        };
+        if (!expectedEvent.equals(config.path("trigger").path("event").asText())
+                || !mission.getTriggerType().name().equals(expectedEvent)) {
+            throw new IllegalArgumentException("Mission code and trigger disagree: " + mission.getCode());
+        }
+        boolean report = mission.getCode().equals("TODAY_REPORT");
+        if (report != config.path("execution").path("presentationOnly").asBoolean()
+                || config.path("ageContent").properties().stream().anyMatch(entry ->
+                        report != entry.getValue().path("answerKind").asText().equals("NONE"))) {
+            throw new IllegalArgumentException("Presentation mode disagrees: " + mission.getCode());
         }
     }
 

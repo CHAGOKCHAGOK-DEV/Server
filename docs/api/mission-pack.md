@@ -1,6 +1,6 @@
 # 미션팩 조회 API와 스키마 v1
 
-`GET /api/v1/mission-packs/current?code=DEFAULT&supportedSchemaVersion=1`은 인증 없이 호출할 수 있습니다. 두 쿼리 파라미터는 생략할 수 있으며 표시한 값이 기본값입니다. 서버는 해당 코드의 발행된 미션팩 중 클라이언트와 서버가 모두 지원하는 스키마 버전 이하인 **가장 높은 콘텐츠 버전**을 반환합니다. 현재 서버가 검증·배포할 수 있는 스키마는 v1과 v2입니다. 보관된 팩과 비활성 미션은 새 다운로드에 포함되지 않습니다. 반환 미션은 코드 순으로 정렬됩니다.
+`GET /api/v1/mission-packs/current?code=DEFAULT&supportedSchemaVersion=1`은 인증 없이 호출할 수 있습니다. 두 쿼리 파라미터는 생략할 수 있으며 표시한 값이 기본값입니다. 서버는 해당 코드의 발행된 미션팩 중 클라이언트와 서버가 모두 지원하는 스키마 버전 이하인 **가장 높은 콘텐츠 버전**을 반환합니다. 현재 서버가 검증·배포할 수 있는 스키마는 v1, v2, v3입니다. 보관된 팩과 비활성 미션은 새 다운로드에 포함되지 않습니다. 반환 미션은 코드 순으로 정렬됩니다.
 
 성공 응답은 공통 `ApiResponse`의 `data`에 다음 값을 담습니다.
 
@@ -39,7 +39,7 @@
 
 Flyway V3가 기본 팩 `DEFAULT` 버전 1과 네 미션을 발행합니다. 이미 같은 코드·버전이 있으면 내용을 덮어쓰지 않습니다. 발행 서비스는 활성 미션이 한 개 이상인지, 각 설정이 JSON Schema와 코드별 의미 규칙에 맞는지 검사합니다. Flyway V4는 발행된 콘텐츠의 DB 수정을 막고, 변경이 필요하면 새 `version`을 만들도록 합니다. 과거 주행 동기화는 당시 사용한 보관 버전을 계속 참조할 수 있습니다.
 
-현재 Android에는 미션팩 다운로드·파싱 연결이 아직 없고 로컬 미션 정의를 실행합니다. 서버 응답을 실제 주행에 적용하려면 Android의 `missionPackSync` 구현, 스키마 버전 확인, 오프라인 캐시 및 실행 규칙 연결이 후속으로 필요합니다.
+2026-11-15 확인한 Android에는 미션팩 다운로드·캐시가 구현되어 있지만 `MissionDefinitions`는 로컬 미션 정의를 실행합니다. `MissionPackRepository.cached()`에도 엔진 연결 TODO가 남아 있습니다. 서버 응답을 실제 주행에 적용하려면 지원 스키마 버전 변경 및 캐시된 설정과 실행 엔진 연결이 필요합니다.
 
 ## 시연용 DEFAULT v2
 
@@ -80,3 +80,33 @@ Flyway V8은 발행된 v2를 변경하지 않고 새 콘텐츠 버전 `DEFAULT` 
 v2 스키마는 [`mission-config-v2.json`](../../src/main/resources/schema/mission-config-v2.json)입니다. `sourceIds`는 노션 원본 ID, `ageContent`는 연령별 질문·답변 방식·정답·피드백입니다. `NONE`은 음성 안내만 하고 답변을 기다리지 않습니다. `{remainingMinutes}`와 `{correctCount}`는 클라이언트가 실제 주행 값으로 바꾸는 템플릿 변수입니다. 숫자 음성 판정은 시연에서 제외해, 숫자 질문은 바로 아래 연령대의 안내나 질문으로 대체했습니다.
 
 데이터가 배포되어 API에 보여도 Android가 v2를 내려받아 이벤트와 답변 규칙을 실행하도록 연결되기 전까지 주행 중 새 미션은 자동으로 실행되지 않습니다. 특히 `V-03` 방향값과 `N-01` 회전 정보는 SDK 필드 확인이 필요합니다. `N-02`는 내비의 남은 시간 값이 있어야 합니다.
+
+## 연령대별 13종 DEFAULT v4
+
+Flyway V10은 기존 v1~v3을 유지하고 DEFAULT v4(schemaVersion 3)를 발행합니다. 신규 응답 형식과 이벤트는 기존 스키마와 구분합니다. supportedSchemaVersion=3 이상 요청은 v4의 13개, 2는 v3의 10개, 기본값 1은 v1의 4개를 받습니다. 새 스키마는 [mission-config-v3.json](../../src/main/resources/schema/mission-config-v3.json)입니다.
+
+| 코드 | 미션 | 이벤트 |
+| --- | --- | --- |
+| BLINK | 깜빡이 소리 | TURN_SIGNAL_OFF |
+| BLINK_LEARN | 깜빡이 배우기 | MISSION_COMPLETED |
+| WIPER | 비 오는 날 | WIPER_ON |
+| RAIN_STOP | 비가 그쳤어요 | WIPER_OFF |
+| NEXT_TURN | 다음 회전 | NAVI_NEXT_TURN |
+| SPEED_GUESS | 빠를까 느릴까 | SPEED_STABLE |
+| SIGNAL_WAIT | 신호 대기 | VEHICLE_STOPPED |
+| DEPART | 부기장 출동 | TRIP_STARTED |
+| BLINK_MEMORY | 깜빡이 기억 게임 | TURN_SIGNAL_SUMMARY |
+| WAIT_BET | 기다리기 내기 | VEHICLE_STOPPED |
+| SPEED_CHANGE | 빨라졌을까 느려졌을까 | SPEED_CHANGED |
+| NEAR_DEST | 곧 도착 | NEAR_DESTINATION |
+| TODAY_REPORT | 오늘의 리포트 | TRIP_ENDED |
+
+서버는 설정을 저장·제공하고, 차량 신호·트리거·음성 인식·정답 판정·재질문·리포트 집계는 클라이언트가 처리합니다. 서버의 JSON Schema 검증은 발행 데이터의 형식 확인이며 아이의 답변을 판정하는 기능이 아닙니다. 주행 동기화 및 집계 로직은 이번 변경에서 수정하지 않습니다. 연령대 저장·조회는 기존 부기장 API의 AGE_5_6, AGE_7_8, AGE_9_PLUS를 그대로 사용합니다.
+
+answerKind는 Android AnswerKind의 YES_NO, LEFT_RIGHT, FREE와 BACKCAR_SKY, BEFORE_AFTER, WIPER_LIGHT, STOPPED_POURING, FAST_SLOW, STOP_GO, GREEN_RED, SOON_LONG을 사용합니다. 고정 선택형 정답 OPTION_A는 첫 선택지입니다. expectedAnswer의 TURN_SIGNAL_DIRECTION, WIPER_AT_RESPONSE, NAVI_DIRECTION, SPEED_THRESHOLD, TURN_SIGNAL_COUNTS, STOP_DURATION, SPEED_HISTORY는 클라이언트가 실제 신호로 계산하는 정답 출처를 나타냅니다. FREE의 ANY_SPOKEN은 참여 응답입니다. TODAY_REPORT는 presentationOnly=true, answerKind=NONE으로 발표만 하며 별도 MissionResult를 저장하지 않습니다. Android 로컬 리포트는 FREE 스크립트를 사용하지만 엔진이 질문·판정·저장 경로를 거치지 않으므로 서버 설정은 NONE으로 명시합니다.
+
+execution.askWhen은 DRIVING/STOPPED/TRIP_END를 구분하고, validity는 시간·내비 거리·정차 상태·재출발·주행 종료 유효성을 나타냅니다. WAIT_BET은 정차 시작부터 30초 이내 재출발이면 첫 선택지를 정답으로 보고, 주차 또는 600초 초과 시 발표를 버립니다. DEPART와 NEAR_DEST의 noAnswerCompletes=true는 현재 Android와 동일합니다. 쿨다운은 기존 서버 LOW/NORMAL/HIGH 설정을 유지하되 SPEED_GUESS는 모두 900초입니다.
+
+속도 기준은 5~8세 60km/h, 9세 이상 50km/h입니다. SPEED_CHANGE는 기획에 따라 20초 동안 속도가 15km/h를 초과해 변할 때 발동합니다(windowSeconds=20, deltaKphExclusive=15). 변화량이 정확히 15km/h이면 발동하지 않습니다. 정답 비교 기준은 5~8세 comparisonSeconds=20, 9세 이상 comparisonSeconds=60입니다. 클라이언트는 이 기획 설정에 맞춰 판정 코드를 수정해야 합니다. 서버가 별도로 정답을 재계산하지 않습니다. {side}, {speed}, {more}, {less}, {other}, {sec}, {answer}, {change}, {diff}, {n}, {m}, {best}는 Android에서 실제 값으로 치환합니다.
+
+현재 로컬 Client의 MissionPackRepository.SUPPORTED_SCHEMA_VERSION은 1이고 다운로드된 팩의 엔진 적용은 TODO입니다. 따라서 서버 변경만으로 앱 실행 미션이 바뀌지는 않습니다. 앱은 이미 로컬 13종을 실행하며, 서버 팩을 사용하려면 schema 3 선택과 설정 적용을 별도 연결해야 합니다. Client 저장소는 이번 작업에서 수정하지 않았습니다.
