@@ -120,7 +120,7 @@
           "type": "integer",
           "minimum": 0
         },
-        "deltaKphAtLeast": {
+        "deltaKphExclusive": {
           "type": "integer",
           "minimum": 0
         },

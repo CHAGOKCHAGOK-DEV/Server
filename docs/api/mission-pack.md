@@ -107,6 +107,6 @@ answerKind는 Android AnswerKind의 YES_NO, LEFT_RIGHT, FREE와 BACKCAR_SKY, BEF
 
 execution.askWhen은 DRIVING/STOPPED/TRIP_END를 구분하고, validity는 시간·내비 거리·정차 상태·재출발·주행 종료 유효성을 나타냅니다. WAIT_BET은 정차 시작부터 30초 이내 재출발이면 첫 선택지를 정답으로 보고, 주차 또는 600초 초과 시 발표를 버립니다. DEPART와 NEAR_DEST의 noAnswerCompletes=true는 현재 Android와 동일합니다. 쿨다운은 기존 서버 LOW/NORMAL/HIGH 설정을 유지하되 SPEED_GUESS는 모두 900초입니다.
 
-속도 기준은 5~8세 60km/h, 9세 이상 50km/h입니다. SPEED_CHANGE는 현재 Android 판정에 맞춰 모든 연령의 comparisonSeconds=20, 변화량 15km/h 이상으로 제공합니다. 기획의 '15km/h 초과', 9세 이상 질문의 '1분 전'과 실제 클라이언트 판정에 차이가 있으므로 질문 또는 앱 판정 기준을 팀에서 확정해야 합니다. 서버가 별도로 정답을 재계산하지 않습니다. {side}, {speed}, {more}, {less}, {other}, {sec}, {answer}, {change}, {diff}, {n}, {m}, {best}는 Android에서 실제 값으로 치환합니다.
+속도 기준은 5~8세 60km/h, 9세 이상 50km/h입니다. SPEED_CHANGE는 기획에 따라 20초 동안 속도가 15km/h를 초과해 변할 때 발동합니다(windowSeconds=20, deltaKphExclusive=15). 변화량이 정확히 15km/h이면 발동하지 않습니다. 정답 비교 기준은 5~8세 comparisonSeconds=20, 9세 이상 comparisonSeconds=60입니다. 클라이언트는 이 기획 설정에 맞춰 판정 코드를 수정해야 합니다. 서버가 별도로 정답을 재계산하지 않습니다. {side}, {speed}, {more}, {less}, {other}, {sec}, {answer}, {change}, {diff}, {n}, {m}, {best}는 Android에서 실제 값으로 치환합니다.
 
 현재 로컬 Client의 MissionPackRepository.SUPPORTED_SCHEMA_VERSION은 1이고 다운로드된 팩의 엔진 적용은 TODO입니다. 따라서 서버 변경만으로 앱 실행 미션이 바뀌지는 않습니다. 앱은 이미 로컬 13종을 실행하며, 서버 팩을 사용하려면 schema 3 선택과 설정 적용을 별도 연결해야 합니다. Client 저장소는 이번 작업에서 수정하지 않았습니다.

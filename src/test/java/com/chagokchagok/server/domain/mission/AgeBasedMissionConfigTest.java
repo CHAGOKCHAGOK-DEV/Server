@@ -40,6 +40,19 @@ class AgeBasedMissionConfigTest {
     }
 
     @Test
+    void speedChangeFollowsPlanningThresholdAndAgeComparisonWindows() throws Exception {
+        var config = seededMissions().stream().filter(m -> m.getCode().equals("SPEED_CHANGE"))
+                .findFirst().orElseThrow().getConfig();
+        assertThat(config.path("trigger").path("windowSeconds").asInt()).isEqualTo(20);
+        assertThat(config.path("trigger").path("deltaKphExclusive").asInt()).isEqualTo(15);
+        assertThat(config.path("trigger").has("deltaKphAtLeast")).isFalse();
+        var ages = config.path("ageContent");
+        assertThat(ages.path("AGE_5_6").path("comparisonSeconds").asInt()).isEqualTo(20);
+        assertThat(ages.path("AGE_7_8").path("comparisonSeconds").asInt()).isEqualTo(20);
+        assertThat(ages.path("AGE_9_PLUS").path("comparisonSeconds").asInt()).isEqualTo(60);
+    }
+
+    @Test
     void rejectsMissingAgeUnknownAnswerKindAndMismatchedTrigger() throws Exception {
         Mission mission = seededMissions().getFirst();
         ObjectNode config = (ObjectNode) mission.getConfig().deepCopy();
