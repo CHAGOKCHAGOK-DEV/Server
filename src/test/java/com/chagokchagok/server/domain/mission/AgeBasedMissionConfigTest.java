@@ -53,6 +53,17 @@ class AgeBasedMissionConfigTest {
     }
 
     @Test
+    void rejectsSpeedThresholdAnswerWithoutThresholdForEveryAge() throws Exception {
+        Mission mission = seededMissions().stream().filter(m -> m.getCode().equals("SPEED_GUESS"))
+                .findFirst().orElseThrow();
+        for (String age : List.of("AGE_5_6", "AGE_7_8", "AGE_9_PLUS")) {
+            ObjectNode config = (ObjectNode) mission.getConfig().deepCopy();
+            ((ObjectNode) config.path("ageContent").path(age)).remove("thresholdKph");
+            assertInvalid(mission, config);
+        }
+    }
+
+    @Test
     void rejectsMissingAgeUnknownAnswerKindAndMismatchedTrigger() throws Exception {
         Mission mission = seededMissions().getFirst();
         ObjectNode config = (ObjectNode) mission.getConfig().deepCopy();

@@ -351,6 +351,15 @@
         "correctMessage",
         "wrongMessage"
       ],
+      "if": {
+        "required": ["expectedAnswer"],
+        "properties": {
+          "expectedAnswer": {"const": "SPEED_THRESHOLD"}
+        }
+      },
+      "then": {
+        "required": ["thresholdKph"]
+      },
       "properties": {
         "question": {
           "type": "string",
