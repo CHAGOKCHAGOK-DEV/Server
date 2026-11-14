@@ -16,7 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class MissionPackService {
 
-    private static final int SUPPORTED_SCHEMA_VERSION = 2;
+    private static final int SUPPORTED_SCHEMA_VERSION = 3;
 
     private final MissionPackRepository packs;
     private final MissionRepository missions;
